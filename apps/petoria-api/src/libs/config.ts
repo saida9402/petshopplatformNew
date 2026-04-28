@@ -21,7 +21,7 @@ export const availableProductSorts = [
 // ─── Boshqa sortlar ───────────────────────────────────────────────────────────
 export const availableBoardArticleSorts = ['createdAt', 'updatedAt', 'articleLikes', 'articleViews'];
 export const availableCommentSorts = ['createdAt', 'updatedAt'];
-
+export const availableOrderSorts = ['createdAt', 'updatedAt', 'orderTotal'];
 // ─── Brendlar ─────────────────────────────────────────────────────────────────
 export const availableBrands = [
 	'Royal Canin',

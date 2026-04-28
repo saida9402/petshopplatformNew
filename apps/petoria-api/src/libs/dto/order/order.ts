@@ -1,5 +1,3 @@
-// src/components/order/dto/order.ts
-
 import { Field, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import mongoose from 'mongoose';
 
