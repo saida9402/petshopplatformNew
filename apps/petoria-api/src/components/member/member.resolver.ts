@@ -10,12 +10,13 @@ import { AuthMember } from '../auth/decorators/authMember.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { MemberType } from '../../libs/enums/member.enum';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { MemberUpdate } from '../../libs/dto/member/member.update';
+
 import { getSerialForImage, shapeIntoMongoObjectId, validMimeTypes } from '../../libs/config';
 import { WithoutGuard } from '../auth/guards/without.guard';
 import { Message } from '../../libs/enums/common.enum';
 import { createWriteStream } from 'fs';
 import { GraphQLUpload, FileUpload } from 'graphql-upload';
+import { MemberUpdate } from '../../libs/dto/member/member.update';
 
 @Resolver()
 export class MemberResolver {

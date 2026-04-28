@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MemberModule } from './member/member.module';
-import { PropertyModule } from './property/property.module';
+import { ProductModule } from './product/product.module';
 import { AuthModule } from './auth/auth.module';
 import { CommentModule } from './comment/comment.module';
 import { LikeModule } from './like/like.module';
@@ -13,7 +13,6 @@ import { OrderModule } from './order/order.module';
 	imports: [
 		MemberModule,
 		AuthModule,
-		PropertyModule,
 		BoardArticleModule,
 
 		CommentModule,
@@ -21,6 +20,7 @@ import { OrderModule } from './order/order.module';
 		ViewModule,
 		FollowModule,
 		OrderModule,
+		ProductModule,
 	],
 })
 export class ComponentsModule {}

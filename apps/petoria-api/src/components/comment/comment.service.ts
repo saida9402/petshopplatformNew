@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, InternalServerErrorException } from '@
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
 import { MemberService } from '../member/member.service';
-import { PropertyService } from '../property/property.service';
+import { ProductService } from '../product/product.service';
 import { BoardArticleService } from '../board-article/board-article.service';
 import { CommentInput, CommentsInquiry } from '../../libs/dto/comment/comment.input';
 import { Direction, Message } from '../../libs/enums/common.enum';
@@ -12,18 +12,33 @@ import { CommentUpdate } from '../../libs/dto/comment/comment.update';
 import { Comments, Comment } from '../../libs/dto/comment/comment';
 import { lookupMember } from '../../libs/config';
 import { T } from '../../libs/types/common';
+import { OrderStatus } from '../../libs/enums/order.enum';
 
 @Injectable()
 export class CommentService {
 	constructor(
 		@InjectModel('Comment') private readonly commentModel: Model<Comment>,
+		@InjectModel('Order') private readonly orderModel: Model<any>,
 		private readonly memberService: MemberService,
-		private readonly propertyService: PropertyService,
+		private readonly productService: ProductService,
 		private readonly boardArticleService: BoardArticleService,
 	) {}
 
 	public async createComment(memberId: ObjectId, input: CommentInput): Promise<Comment> {
 		input.memberId = memberId;
+
+		// ─── Faqat mahsulot sotib olgan foydalanuvchi 후기 yoza oladi ──────────────
+		if (input.commentGroup === CommentGroup.PRODUCT) {
+			const hasPurchased = await this.orderModel.exists({
+				memberId: memberId,
+				'orderItems.productId': input.commentRefId,
+				orderStatus: OrderStatus.DELIVERED, // faqat yetkazib berilgan buyurtmalar
+			});
+
+			if (!hasPurchased) {
+				throw new BadRequestException(Message.NOT_ALLOWED_REQUEST); // sotib olmagan = yozolmaydi
+			}
+		}
 
 		let result = null;
 		try {
@@ -34,10 +49,11 @@ export class CommentService {
 		}
 
 		switch (input.commentGroup) {
-			case CommentGroup.PROPERTY:
-				await this.propertyService.propertyStatsEditor({
+			case CommentGroup.PRODUCT:
+				// productService tayyor bo'lganda quyidagi kod ishlaydi:
+				await this.productService.productStatsEditor({
 					_id: input.commentRefId,
-					targetKey: 'propertyComments',
+					targetKey: 'productComments',
 					modifier: 1,
 				});
 				break;

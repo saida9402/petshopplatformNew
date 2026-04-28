@@ -6,7 +6,7 @@ import { SellersInquiry, LoginInput, MemberInput, MembersInquiry } from '../../l
 import { MemberStatus, MemberType } from '../../libs/enums/member.enum';
 import { Direction, Message } from '../../libs/enums/common.enum';
 import { AuthService } from '../auth/auth.service';
-import { MemberUpdate } from '../../libs/dto/member/member.update';
+
 import { StatisticModifier, T } from '../../libs/types/common';
 import { ViewService } from '../view/view.service';
 import { ViewGroup } from '../../libs/enums/view.enum';
@@ -15,6 +15,7 @@ import { LikeInput } from '../../libs/dto/like/like.input';
 import { LikeService } from '../like/like.service';
 import { Follower, Following, MeFollowed } from '../../libs/dto/follow/follow';
 import { lookupAuthMemberLiked } from '../../libs/config';
+import { MemberUpdate } from '../../libs/dto/member/member.update';
 
 @Injectable()
 export class MemberService {
