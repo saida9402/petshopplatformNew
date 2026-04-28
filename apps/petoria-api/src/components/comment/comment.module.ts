@@ -9,6 +9,7 @@ import { BoardArticleModule } from '../board-article/board-article.module';
 import CommentSchema from '../../schemas/Comment.model';
 import { ProductModule } from '../product/product.module';
 import { OrderModule } from '../order/order.module';
+import { OrderSchema } from '../../schemas/Order.model';
 
 @Module({
 	imports: [
@@ -16,6 +17,10 @@ import { OrderModule } from '../order/order.module';
 			{
 				name: 'Comment',
 				schema: CommentSchema,
+			},
+			{
+				name: 'Order',
+				schema: OrderSchema,
 			},
 		]),
 		AuthModule,
