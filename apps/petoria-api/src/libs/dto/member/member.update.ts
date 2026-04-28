@@ -1,52 +1,26 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, ID, InputType } from '@nestjs/graphql';
 import { IsNotEmpty, IsOptional, Length } from 'class-validator';
-import { MemberAuthType, MemberStatus, MemberType } from '../../enums/member.enum';
-import { ObjectId } from 'mongoose';
+import { OrderStatus } from '../../../libs/enums/order.enum';
 
 @InputType()
-export class MemberUpdate {
+export class OrderUpdateInput {
 	@IsNotEmpty()
-	@Field(() => String)
-	_id: ObjectId;
+	@Field(() => ID)
+	orderId: string;
+
+	@IsNotEmpty()
+	@Field(() => OrderStatus)
+	orderStatus: OrderStatus;
+}
+
+@InputType()
+export class OrderCancelInput {
+	@IsNotEmpty()
+	@Field(() => ID)
+	orderId: string;
 
 	@IsOptional()
-	@Field(() => MemberType, { nullable: true })
-	memberType?: MemberType;
-
-	@IsOptional()
-	@Field(() => MemberStatus, { nullable: true })
-	memberStatus?: MemberStatus;
-
-	@IsOptional()
-	@Field(() => String, { nullable: true })
-	memberPhone?: string;
-
-	@IsOptional()
-	@Length(3, 12)
-	@Field(() => String, { nullable: true })
-	memberNick?: string;
-
-	@IsOptional()
-	@Length(5, 12)
-	@Field(() => String, { nullable: true })
-	memberPassword?: string;
-
-	@IsOptional()
-	@Length(3, 100)
-	@Field(() => String, { nullable: true })
-	memberFullName?: string;
-
-	@IsOptional()
-	@Field(() => String, { nullable: true })
-	memberImage?: string;
-
-	@IsOptional()
-	@Field(() => String, { nullable: true })
-	memberAddress?: string;
-
-	@IsOptional()
-	@Field(() => String, { nullable: true })
-	memberDesx?: string;
-
-	deletedAt?: Date;
+	@Length(0, 300)
+	@Field({ nullable: true })
+	cancelReason?: string;
 }

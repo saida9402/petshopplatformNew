@@ -1,7 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-
 import { OrderStatus } from '../../libs/enums/order.enum';
 import { Order } from '../../schemas/Order.model';
 import { OrderInput } from '../../libs/dto/order/order.input';
@@ -15,6 +14,7 @@ export class OrderService {
 	) {}
 
 	public async createOrder(memberId: string, input: OrderInput): Promise<Order> {
+		// ✅ orderTotal serverda hisoblanadi — frontendga ishonib bo'lmaydi
 		const total = input.orderItems.reduce((sum, item) => sum + item.itemPrice * item.itemQuantity, 0);
 
 		const result = await this.orderModel.create({
@@ -38,33 +38,38 @@ export class OrderService {
 	}
 
 	public async updateOrder(input: OrderUpdateInput): Promise<Order> {
+		// ✅ CANCEL ga o'tkazishni bu yerda bloklash — buning uchun cancelOrder bor
+		if (input.orderStatus === OrderStatus.CANCEL) {
+			throw new BadRequestException('Bekor qilish uchun cancelOrder dan foydalaning');
+		}
+
 		const result = await this.orderModel.findByIdAndUpdate(
 			input.orderId,
-			{
-				orderStatus: input.orderStatus,
-			},
+			{ orderStatus: input.orderStatus },
 			{ new: true },
 		);
 
-		if (!result) {
-			throw new NotFoundException('Order not found');
-		}
-
+		if (!result) throw new NotFoundException('Buyurtma topilmadi');
 		return result;
 	}
 
 	public async cancelOrder(input: OrderCancelInput): Promise<Order> {
+		const order = await this.orderModel.findById(input.orderId);
+		if (!order) throw new NotFoundException('Buyurtma topilmadi');
+
+		// ✅ Faqat PENDING yoki PROCESS holatidagi buyurtmani bekor qilish mumkin
+		if (![OrderStatus.PENDING, OrderStatus.PROCESS].includes(order.orderStatus)) {
+			throw new BadRequestException("Bu buyurtmani bekor qilib bo'lmaydi");
+		}
+
 		const result = await this.orderModel.findByIdAndUpdate(
 			input.orderId,
 			{
 				orderStatus: OrderStatus.CANCEL,
+				cancelledAt: new Date(),
 			},
 			{ new: true },
 		);
-
-		if (!result) {
-			throw new NotFoundException('Order not found');
-		}
 
 		return result;
 	}
