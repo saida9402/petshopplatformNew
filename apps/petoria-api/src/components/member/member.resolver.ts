@@ -1,6 +1,6 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { MemberService } from './member.service';
-import { AgentsInquiry, LoginInput, MemberInput, MembersInquiry } from '../../libs/dto/member/member.input';
+import { SellersInquiry, LoginInput, MemberInput, MembersInquiry } from '../../libs/dto/member/member.input';
 import { InternalServerErrorException, UseGuards } from '@nestjs/common';
 import { Member, Members } from '../../libs/dto/member/member';
 import { AuthGuard } from '../auth/guards/auth.guard';
@@ -64,9 +64,12 @@ export class MemberResolver {
 
 	@UseGuards(WithoutGuard)
 	@Query(() => Members)
-	public async getAgents(@Args('input') input: AgentsInquiry, @AuthMember('_id') memberId: ObjectId): Promise<Members> {
+	public async getSeller(
+		@Args('input') input: SellersInquiry,
+		@AuthMember('_id') memberId: ObjectId,
+	): Promise<Members> {
 		console.log('Query: getAgents');
-		return await this.memberService.getAgents(memberId, input);
+		return await this.memberService.getSellers(memberId, input);
 	}
 
 	@UseGuards(AuthGuard)
@@ -90,7 +93,7 @@ export class MemberResolver {
 		return await this.memberService.getAllMembersByAdmin(input);
 	}
 
-	@Roles(MemberType.USER, MemberType.AGENT)
+	@Roles(MemberType.USER, MemberType.SELLER)
 	@UseGuards(RolesGuard)
 	@Query(() => String)
 	public async checkAuthRoles(@AuthMember() authMember: Member): Promise<string> {

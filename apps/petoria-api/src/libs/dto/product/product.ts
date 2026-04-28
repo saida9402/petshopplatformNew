@@ -1,223 +1,93 @@
-import { ObjectType, Field, ID, Int, Float } from '@nestjs/graphql';
-import {
-	ProductCategory,
-	PetType,
-	ProductBadge,
-	ProductStatus,
-	ProductUnit,
-	ProductSize,
-} from '../../enums/product.enum';
+import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { ObjectId } from 'mongoose';
+import { ProductCategory, ProductStatus, ProductType } from '../../enums/product.enum';
+import { Member, TotalCounter } from '../member/member';
+import { MeLiked } from '../like/like';
 
-// ================================================================
-//  product.ts  (DTO papkasida)
-//
-//  Bu fayl GraphQL @ObjectType larini o'z ichiga oladi.
-//  Resolver (product.resolver.ts) Query va Mutation larida
-//  shu classlardan birini qaytaradi.
-//
-//  Next.js tomondan Apollo Client shu typedagi ma'lumotni oladi.
-//
-//  Faylda 3 ta class bor:
-//    1. Product      → bitta mahsulotning to'liq ma'lumoti
-//    2. ProductCard  → shop ro'yxatidagi kichik karta (yengil versiya)
-//    3. ProductList  → paginated ro'yxat ("124 ta mahsulot topildi")
-// ================================================================
-
-// ----------------------------------------------------------------
-//  1. PRODUCT
-//     Bitta mahsulotning barcha ma'lumotlari.
-//     Ishlatiladi:
-//       - product(id) query → bitta mahsulot sahifasi
-//       - createProduct mutation → yangi mahsulot qaytaradi
-//       - updateProduct mutation → yangilangan mahsulot qaytaradi
-// ----------------------------------------------------------------
 @ObjectType()
 export class Product {
-	@Field(() => ID)
-	id: string;
+	@Field(() => String)
+	_id: ObjectId;
 
-	// -- Asosiy ma'lumot ------------------------------------------
-	@Field()
-	name: string;
-	// Misol: "Royal Canin Adult"
+	@Field(() => ProductType)
+	productType: ProductType; // Itlar | Mushuklar | Qushlar | Baliqlar
 
-	@Field()
-	brand: string;
-	// Misol: "Royal Canin"
+	@Field(() => ProductStatus)
+	productStatus: ProductStatus; // ACTIVE | SOLD | DELETE
 
-	@Field({ nullable: true })
-	description?: string;
-	// Ixtiyoriy tavsif matni
-
-	// -- Kategoriya va hayvon turi --------------------------------
 	@Field(() => ProductCategory)
-	category: ProductCategory;
-	// Misol: ProductCategory.FOOD
+	productCategory: ProductCategory; // Ovqat | Dorilar | Aksessuarlar | O'yinchoqlar
 
-	@Field(() => [PetType])
-	petTypes: PetType[];
-	// Misol: [PetType.DOG, PetType.CAT]
-	// Bir mahsulot bir nechta hayvon uchun bo'lishi mumkin
+	@Field(() => String)
+	productName: string; // "RC Maxi Adult", "Whiskas Tuna", "KONG Extreme"
 
-	// -- Narx -----------------------------------------------------
-	@Field(() => Int)
-	price: number;
-	// Misol: 89000 (so'mda)
+	@Field(() => String)
+	productBrand: string; // "Royal Canin", "Whiskas", "Kong"
 
-	@Field(() => Int)
-	discountPercent: number;
-	// Misol: 20 → "Sale -20%" badge chiqadi
+	@Field(() => String, { nullable: true })
+	productSize?: string; // "10kg", "L size", "250ml", "2 ta", "M"
+
+	@Field(() => Number)
+	productPrice: number; // 320_000, 95_000, 58_000 ...
 
 	@Field(() => Int)
-	finalPrice: number;
-	// Hisoblanadi: price * (1 - discountPercent / 100)
-	// Misol: 89000 * 0.8 = 71200
-	// Bu maydon service da hisoblanadi, bazada saqlanmaydi
+	productStock: number; // ombordagi miqdori
 
-	// -- Ombor ----------------------------------------------------
 	@Field(() => Int)
-	stock: number;
-	// Omborda nechta dona qolgan
+	productViews: number;
 
-	@Field()
-	inStock: boolean;
-	// stock > 0 bo'lsa true, aks holda false
-	// Bu maydon service da hisoblanadi
+	@Field(() => Int)
+	productLikes: number;
 
-	// -- O'lchov --------------------------------------------------
-	@Field(() => ProductUnit)
-	unit: ProductUnit;
-	// Misol: ProductUnit.KG
+	@Field(() => Int)
+	productComments: number;
 
-	@Field(() => Float)
-	unitValue: number;
-	// Misol: 2.0 → frontendda "2kg" ko'rinishida chiqadi
-
-	@Field(() => ProductSize, { nullable: true })
-	size?: ProductSize;
-	// Faqat kiyim va aksessuarlarda bo'ladi
-	// Misol: ProductSize.M → "M size"
-
-	// -- Badge va rasm --------------------------------------------
-	@Field(() => ProductBadge)
-	badge: ProductBadge;
-	// Misol: ProductBadge.NEW → sariq "Yangi" badge
-	// Misol: ProductBadge.SALE → yashil "Sale -20%" badge
-
-	@Field({ nullable: true })
-	imageUrl?: string;
-	// Asosiy rasm URL manzili
+	@Field(() => Int)
+	productRank: number; // "Bestseller" badge uchun ishlatiladi
 
 	@Field(() => [String])
-	images: string[];
-	// Qo'shimcha rasmlar ro'yxati (gallery uchun)
+	productImages: string[];
 
-	// -- Holat ----------------------------------------------------
-	@Field(() => ProductStatus)
-	status: ProductStatus;
-	// Misol: ProductStatus.ACTIVE, OUT_OF_STOCK ...
+	@Field(() => String, { nullable: true })
+	productDesc?: string;
 
-	@Field()
-	isActive: boolean;
-	// false bo'lsa shop da ko'rinmaydi
+	@Field(() => Boolean)
+	productSale: boolean; // "-30%" chegirma badge uchun
 
-	// -- Yetkazib berish ------------------------------------------
-	@Field(() => Int, { nullable: true })
-	weight?: number;
-	// Gramda, yetkazib berish narxini hisoblash uchun
+	@Field(() => Number, { nullable: true })
+	productSalePercent?: number; // chegirma foizi, masalan: 30
 
-	// -- Statistika -----------------------------------------------
-	@Field(() => Float)
-	rating: number;
-	// O'rtacha baho: 0.0 dan 5.0 gacha
-	// Barcha review.rating larning o'rtachasi
+	@Field(() => String)
+	memberId: ObjectId; // mahsulotni qo'shgan sotuvchi
 
-	@Field(() => Int)
-	reviewCount: number;
-	// Nechta izoh yozilgan
+	@Field(() => Date, { nullable: true })
+	soldAt?: Date;
 
-	// -- Vaqt -----------------------------------------------------
-	@Field()
+	@Field(() => Date, { nullable: true })
+	deletedAt?: Date;
+
+	@Field(() => Date, { nullable: true })
+	manufacturedAt?: Date;
+
+	@Field(() => Date)
 	createdAt: Date;
 
-	@Field()
+	@Field(() => Date)
 	updatedAt: Date;
+
+	/** aggregation orqali keladigan ma'lumotlar */
+	@Field(() => Member, { nullable: true })
+	memberData?: Member;
+
+	@Field(() => [MeLiked], { nullable: true })
+	meLiked?: MeLiked[];
 }
 
-// ----------------------------------------------------------------
-//  2. PRODUCT CARD
-//     Shop sahifasidagi mahsulot kartasi uchun yengil versiya.
-//     Product ga qaraganda kamroq maydon bor — faqat ro'yxat uchun.
-//     Ishlatiladi:
-//       - products() query → shop ro'yxati
-// ----------------------------------------------------------------
 @ObjectType()
-export class ProductCard {
-	@Field(() => ID)
-	id: string;
+export class Products {
+	@Field(() => [Product])
+	list: Product[];
 
-	@Field()
-	name: string;
-	// Misol: "Royal Canin Adult"
-
-	@Field()
-	brand: string;
-	// Misol: "Royal Canin • 2kg" (frontendda birlashtirilib chiqadi)
-
-	@Field(() => Int)
-	price: number;
-	// Misol: 89000
-
-	@Field(() => Int)
-	finalPrice: number;
-	// Chegirmadan keyingi narx
-
-	@Field(() => Int)
-	discountPercent: number;
-	// Misol: 20
-
-	@Field(() => ProductBadge)
-	badge: ProductBadge;
-	// NEW | SALE | BESTSELLER | NONE
-
-	@Field({ nullable: true })
-	imageUrl?: string;
-
-	@Field()
-	inStock: boolean;
-	// stock > 0
-
-	@Field(() => Float)
-	rating: number;
-	// Yulduz bahosi
-}
-
-// ----------------------------------------------------------------
-//  3. PRODUCT LIST
-//     Paginated ro'yxat uchun wrapper.
-//     Shop sahifasida "124 ta mahsulot topildi" ko'rsatish uchun.
-//     Ishlatiladi:
-//       - products() query
-// ----------------------------------------------------------------
-@ObjectType()
-export class ProductList {
-	@Field(() => [ProductCard])
-	data: ProductCard[];
-	// Joriy sahifadagi mahsulotlar ro'yxati
-
-	@Field(() => Int)
-	total: number;
-	// Jami mahsulotlar soni → "124 ta mahsulot topildi"
-
-	@Field(() => Int)
-	page: number;
-	// Joriy sahifa raqami
-
-	@Field(() => Int)
-	limit: number;
-	// Bir sahifada nechta mahsulot
-
-	@Field(() => Int)
-	totalPages: number;
-	// Jami sahifalar soni
+	@Field(() => [TotalCounter], { nullable: true })
+	metaCounter: TotalCounter[];
 }

@@ -1,24 +1,40 @@
 import { ObjectId } from 'bson';
-
-export const availableAgentSorts = ['createdAt', 'updatedAt', 'memberLikes', 'memberViews', 'memberRank'];
-export const availableMemberSorts = ['createdAt', 'updatedAt', 'memberLikes', 'memberViews'];
-export const availableOptions = ['propertyBarter', 'propertyRent'];
-export const availablePropertySorts = [
-	'createdAt',
-	'updatedAt',
-	'propertyLikes',
-	'propertyViews',
-	'propertyRank',
-	'propertyPrice',
-];
-export const availableBoardArticleSorts = ['createdAt', 'updatedAt', 'articleLikes', 'articleViews'];
-export const availableCommentSorts = ['createdAt', 'updatedAt'];
-
-// IMAGE CONFIGURATION (config.js)
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
 import { T } from './types/common';
 
+// ─── Seller (Agent o'rniga) ───────────────────────────────────────────────────
+export const availableSellerSorts = ['createdAt', 'updatedAt', 'memberLikes', 'memberViews', 'memberRank'];
+export const availableMemberSorts = ['createdAt', 'updatedAt', 'memberLikes', 'memberViews'];
+
+// ─── Product (Property o'rniga) ───────────────────────────────────────────────
+export const availableProductOptions = ['productSale', 'productRent'];
+export const availableProductSorts = [
+	'createdAt',
+	'updatedAt',
+	'productLikes',
+	'productViews',
+	'productRank',
+	'productPrice',
+];
+
+// ─── Boshqa sortlar ───────────────────────────────────────────────────────────
+export const availableBoardArticleSorts = ['createdAt', 'updatedAt', 'articleLikes', 'articleViews'];
+export const availableCommentSorts = ['createdAt', 'updatedAt'];
+
+// ─── Brendlar ─────────────────────────────────────────────────────────────────
+export const availableBrands = [
+	'Royal Canin',
+	'Purina',
+	'Hills',
+	'Whiskas',
+	'Elanco',
+	'Furminator',
+	'Kong',
+	'PetStyle',
+];
+
+// ─── Image konfiguratsiyasi ───────────────────────────────────────────────────
 export const validMimeTypes = ['image/png', 'image/jpg', 'image/jpeg'];
 export const getSerialForImage = (filename: string) => {
 	const ext = path.parse(filename).ext;
@@ -29,6 +45,7 @@ export const shapeIntoMongoObjectId = (target: any) => {
 	return typeof target === 'string' ? new ObjectId(target) : target;
 };
 
+// ─── Aggregation pipeline yordamchilari ──────────────────────────────────────
 export const lookupAuthMemberLiked = (memberId: T, targetRefId: string = '$_id') => {
 	return {
 		$lookup: {
@@ -124,20 +141,21 @@ export const lookupFollowerData = {
 	},
 };
 
+// ─── Favorite va Visit (property o'rniga product) ────────────────────────────
 export const lookupFavorite = {
 	$lookup: {
 		from: 'members',
-		localField: 'favoriteProperty.memberId',
+		localField: 'favoriteProduct.memberId',
 		foreignField: '_id',
-		as: 'favoriteProperty.memberData',
+		as: 'favoriteProduct.memberData',
 	},
 };
 
 export const lookupVisit = {
 	$lookup: {
 		from: 'members',
-		localField: 'visitedProperty.memberId',
+		localField: 'visitedProduct.memberId',
 		foreignField: '_id',
-		as: 'visitedProperty.memberData',
+		as: 'visitedProduct.memberData',
 	},
 };

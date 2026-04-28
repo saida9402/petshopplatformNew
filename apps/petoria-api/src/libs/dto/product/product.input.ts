@@ -1,150 +1,229 @@
-import { InputType, Field, Int, Float } from '@nestjs/graphql';
-import { IsString, IsOptional, IsEnum, IsArray, IsInt, IsBoolean, IsUrl, Min, Max, MinLength } from 'class-validator';
-
-import { ProductCategory, PetType, ProductBadge, ProductUnit, ProductSize } from '../../enums/product.enum';
-
-// ================================================================
-//  product.input.ts  (DTO papkasida)
-//
-//  Bu faylda faqat bitta class bor: CreateProductInput
-//  Ishlatiladi:
-//    Mutation → createProduct(input: CreateProductInput): Product
-//
-//  @InputType()  → GraphQL da input sifatida taniladi
-//  @IsString()   → class-validator tekshiradi (ValidationPipe orqali)
-// ================================================================
+import { Field, InputType, Int } from '@nestjs/graphql';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, Length, Min } from 'class-validator';
+import { ProductCategory, ProductStatus, ProductType } from '../../enums/product.enum';
+import { ObjectId } from 'mongoose';
+import { availableBrands, availableProductSorts } from '../../config';
+import { Direction } from '../../enums/common.enum';
 
 @InputType()
-export class CreateProductInput {
-	// -- Asosiy ma'lumot ------------------------------------------
+export class ProductInput {
+	@IsNotEmpty()
+	@Field(() => ProductType)
+	productType: ProductType;
 
-	@Field()
-	@IsString()
-	@MinLength(2)
-	name: string;
-	// Mahsulot nomi, kamida 2 ta harf
-	// Misol: "Royal Canin Adult"
-
-	@Field()
-	@IsString()
-	brand: string;
-	// Brend nomi
-	// Misol: "Royal Canin"
-
-	@Field({ nullable: true })
-	@IsOptional()
-	@IsString()
-	description?: string;
-	// Ixtiyoriy tavsif
-	// Yuborilmasa null saqlanadi
-
-	// -- Kategoriya va hayvon turi --------------------------------
-
+	@IsNotEmpty()
 	@Field(() => ProductCategory)
-	@IsEnum(ProductCategory)
-	category: ProductCategory;
-	// Misol: ProductCategory.FOOD
-	// Faqat enum dagi qiymatlardan biri bo'lishi kerak
+	productCategory: ProductCategory;
 
-	@Field(() => [PetType])
-	@IsArray()
-	@IsEnum(PetType, { each: true })
-	petTypes: PetType[];
-	// Misol: [PetType.DOG] yoki [PetType.DOG, PetType.CAT]
-	// Kamida bitta hayvon turi ko'rsatilishi kerak
+	@IsNotEmpty()
+	@Length(2, 100)
+	@Field(() => String)
+	productName: string;
 
-	// -- Narx -----------------------------------------------------
+	@IsNotEmpty()
+	@Length(2, 100)
+	@Field(() => String)
+	productBrand: string;
+
+	@IsOptional()
+	@Length(1, 50)
+	@Field(() => String, { nullable: true })
+	productSize?: string; // e.g. "10kg", "L size", "250ml", "2 ta"
+
+	@IsNotEmpty()
+	@Field(() => Number)
+	productPrice: number;
+
+	@IsNotEmpty()
+	@IsInt()
+	@Min(0)
+	@Field(() => Int)
+	productStock: number;
+
+	@IsNotEmpty()
+	@Field(() => [String])
+	productImages: string[];
+
+	@IsOptional()
+	@Length(5, 1000)
+	@Field(() => String, { nullable: true })
+	productDesc?: string;
+
+	@IsOptional()
+	@Field(() => Boolean, { nullable: true })
+	productSale?: boolean; // chegirmali mahsulot (-30% kabi)
+
+	@IsOptional()
+	@Field(() => Number, { nullable: true })
+	productSalePercent?: number; // chegirma foizi
+
+	memberId?: ObjectId; // sotuvchi (agent) ID
+
+	@IsOptional()
+	@Field(() => Date, { nullable: true })
+	manufacturedAt?: Date; // ishlab chiqarilgan sana
+}
+
+// ─── Filter yordamchi inputlar ──────────────────────────────────────────────
+
+@InputType()
+export class PricesRange {
+	@Field(() => Int)
+	start: number;
 
 	@Field(() => Int)
-	@IsInt()
-	@Min(0)
-	price: number;
-	// So'mda, butun son
-	// Misol: 89000
-	// Manfiy bo'lmaydi
+	end: number;
+}
 
-	@Field(() => Int, { nullable: true, defaultValue: 0 })
+// ─── Foydalanuvchi uchun mahsulot qidirish ───────────────────────────────────
+
+@InputType()
+class PISearch {
 	@IsOptional()
-	@IsInt()
-	@Min(0)
-	@Max(100)
-	discountPercent?: number;
-	// Chegirma foizi, 0 dan 100 gacha
-	// Misol: 20 → "Sale -20%" badge chiqadi
-	// Yuborilmasa 0 bo'ladi
+	@Field(() => String, { nullable: true })
+	memberId?: string; // ✅ GraphQL da string sifatida keladi
 
-	// -- Ombor ----------------------------------------------------
+	@IsOptional()
+	@Field(() => [ProductType], { nullable: true })
+	typeList?: ProductType[]; // Itlar, Mushuklar, Qushlar, Baliqlar
 
+	@IsOptional()
+	@Field(() => [ProductCategory], { nullable: true })
+	categoryList?: ProductCategory[]; // Ovqat, Dorilar, Aksessuarlar, O'yinchoqlar
+
+	@IsOptional()
+	@IsIn(availableBrands, { each: true })
+	@Field(() => [String], { nullable: true })
+	brandList?: string[]; // Royal Canin, Purina, Hills, Whiskas ...
+
+	@IsOptional()
+	@Field(() => PricesRange, { nullable: true })
+	pricesRange?: PricesRange; // narx oralig'i filtri
+
+	@IsOptional()
+	@Field(() => Boolean, { nullable: true })
+	onSale?: boolean; // faqat chegirmali mahsulotlarni ko'rsatish
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	text?: string; // matnli qidiruv
+}
+
+@InputType()
+export class ProductsInquiry {
+	@IsNotEmpty()
+	@Min(1)
 	@Field(() => Int)
-	@IsInt()
-	@Min(0)
-	stock: number;
-	// Ombordagi miqdor
-	// Misol: 50
-	// Manfiy bo'lmaydi
+	page: number;
 
-	// -- O'lchov --------------------------------------------------
+	@IsNotEmpty()
+	@Min(1)
+	@Field(() => Int)
+	limit: number;
 
-	@Field(() => ProductUnit)
-	@IsEnum(ProductUnit)
-	unit: ProductUnit;
-	// O'lchov birligi
-	// Misol: ProductUnit.KG
-
-	@Field(() => Float)
-	unitValue: number;
-	// O'lchov qiymati
-	// Misol: 2.0 → "2kg" ko'rinishida frontendda chiqadi
-	// Misol: 400.0 → "400ml"
-
-	@Field(() => ProductSize, { nullable: true })
 	@IsOptional()
-	@IsEnum(ProductSize)
-	size?: ProductSize;
-	// Faqat kiyim va aksessuarlarda kerak
-	// Misol: ProductSize.M → "M size"
-	// Boshqa kategoriyalarda yuborilmaydi
+	@IsIn(availableProductSorts)
+	@Field(() => String, { nullable: true })
+	sort?: string; // "Eng mashhur", "Arzondan qimmatlga" va boshqalar
 
-	// -- Badge va rasm --------------------------------------------
-
-	@Field(() => ProductBadge, { nullable: true, defaultValue: ProductBadge.NONE })
 	@IsOptional()
-	@IsEnum(ProductBadge)
-	badge?: ProductBadge;
-	// Karta ustidagi yorliq
-	// Misol: ProductBadge.NEW → sariq "Yangi"
-	// Yuborilmasa NONE bo'ladi
+	@Field(() => Direction, { nullable: true })
+	direction?: Direction;
 
-	@Field({ nullable: true })
+	@IsNotEmpty()
+	@Field(() => PISearch)
+	search: PISearch;
+}
+
+// ─── Sotuvchi (Agent) uchun mahsulot qidirish ───────────────────────────────
+
+@InputType()
+class APISearch {
 	@IsOptional()
-	@IsUrl()
-	imageUrl?: string;
-	// Asosiy rasm URL manzili
-	// To'g'ri URL bo'lishi kerak
+	@Field(() => ProductStatus, { nullable: true })
+	productStatus?: ProductStatus;
+}
 
-	@Field(() => [String], { nullable: true, defaultValue: [] })
+@InputType()
+export class AgentProductsInquiry {
+	@IsNotEmpty()
+	@Min(1)
+	@Field(() => Int)
+	page: number;
+
+	@IsNotEmpty()
+	@Min(1)
+	@Field(() => Int)
+	limit: number;
+
 	@IsOptional()
-	@IsArray()
-	images?: string[];
-	// Qo'shimcha rasmlar ro'yxati (gallery uchun)
-	// Yuborilmasa bo'sh array bo'ladi
+	@IsIn(availableProductSorts)
+	@Field(() => String, { nullable: true })
+	sort?: string;
 
-	// -- Yetkazib berish ------------------------------------------
-
-	@Field(() => Int, { nullable: true })
 	@IsOptional()
-	@IsInt()
-	@Min(0)
-	weight?: number;
-	// Gramda, yetkazib berish narxini hisoblash uchun
-	// Ixtiyoriy maydon
+	@Field(() => Direction, { nullable: true })
+	direction?: Direction;
 
-	// -- Boshqaruv ------------------------------------------------
+	@IsNotEmpty()
+	@Field(() => APISearch)
+	search: APISearch;
+}
 
-	@Field({ nullable: true, defaultValue: true })
+// ─── Admin uchun barcha mahsulotlarni qidirish ───────────────────────────────
+
+@InputType()
+class ALPISearch {
 	@IsOptional()
-	@IsBoolean()
-	isActive?: boolean;
-	// false bo'lsa shop da ko'rinmaydi
-	// Yuborilmasa true bo'ladi
+	@Field(() => ProductStatus, { nullable: true })
+	productStatus?: ProductStatus;
+
+	@IsOptional()
+	@Field(() => [ProductType], { nullable: true })
+	productTypeList?: ProductType[];
+
+	@IsOptional()
+	@Field(() => [ProductCategory], { nullable: true })
+	productCategoryList?: ProductCategory[];
+}
+
+@InputType()
+export class AllProductsInquiry {
+	@IsNotEmpty()
+	@Min(1)
+	@Field(() => Int)
+	page: number;
+
+	@IsNotEmpty()
+	@Min(1)
+	@Field(() => Int)
+	limit: number;
+
+	@IsOptional()
+	@IsIn(availableProductSorts)
+	@Field(() => String, { nullable: true })
+	sort?: string;
+
+	@IsOptional()
+	@Field(() => Direction, { nullable: true })
+	direction?: Direction;
+
+	@IsNotEmpty()
+	@Field(() => ALPISearch)
+	search: ALPISearch;
+}
+
+// ─── Oddiy sahifalash ────────────────────────────────────────────────────────
+
+@InputType()
+export class OrdinaryInquiry {
+	@IsNotEmpty()
+	@Min(1)
+	@Field(() => Int)
+	page: number;
+
+	@IsNotEmpty()
+	@Min(1)
+	@Field(() => Int)
+	limit: number;
 }
