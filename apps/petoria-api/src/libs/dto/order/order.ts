@@ -1,19 +1,6 @@
-import { Field, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import mongoose from 'mongoose';
-
-import { OrderItemStatus, OrderPaymentMethod, OrderStatus } from '../../../libs/enums/order.enum';
-
-registerEnumType(OrderStatus, {
-	name: 'OrderStatus',
-});
-
-registerEnumType(OrderItemStatus, {
-	name: 'OrderItemStatus',
-});
-
-registerEnumType(OrderPaymentMethod, {
-	name: 'OrderPaymentMethod',
-});
+import { OrderItemStatus, OrderPaymentMethod, OrderStatus } from '../../enums/order.enum';
 
 @ObjectType()
 export class OrderItemDTO {
@@ -58,6 +45,12 @@ export class OrderDTO {
 
 	@Field({ nullable: true })
 	orderNote?: string;
+
+	@Field({ nullable: true })
+	cancelReason?: string;
+
+	@Field({ nullable: true })
+	cancelledAt?: Date;
 
 	@Field()
 	createdAt: Date;

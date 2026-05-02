@@ -2,6 +2,9 @@ import { Field, ID, InputType, Int } from '@nestjs/graphql';
 import { IsInt, IsNotEmpty, IsOptional, Length, Min } from 'class-validator';
 import { OrderPaymentMethod } from '../../../libs/enums/order.enum';
 
+/* ─────────────────────────────────────────
+   OrderItemInput — a single product in the order
+───────────────────────────────────────── */
 @InputType()
 export class OrderItemInput {
 	@IsNotEmpty()
@@ -14,6 +17,11 @@ export class OrderItemInput {
 	@Field(() => Int)
 	itemQuantity: number;
 
+	/**
+	 * Unit price provided by the client.
+	 * The server recalculates orderTotal from this value —
+	 * never trust the client-side total directly.
+	 */
 	@IsNotEmpty()
 	@IsInt()
 	@Min(0)
@@ -21,6 +29,9 @@ export class OrderItemInput {
 	itemPrice: number;
 }
 
+/* ─────────────────────────────────────────
+   OrderInput — create a new order
+───────────────────────────────────────── */
 @InputType()
 export class OrderInput {
 	@IsNotEmpty()

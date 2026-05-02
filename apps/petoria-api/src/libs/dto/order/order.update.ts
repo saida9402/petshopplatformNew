@@ -2,6 +2,15 @@ import { Field, ID, InputType } from '@nestjs/graphql';
 import { IsNotEmpty, IsOptional, Length } from 'class-validator';
 import { OrderStatus } from '../../../libs/enums/order.enum';
 
+/* ─────────────────────────────────────────
+   OrderUpdateInput — advance order status (admin only)
+
+   Allowed transitions:
+   PENDING → PROCESS → CONFIRM → DELIVER
+
+   Transitioning to CANCEL is blocked here —
+   use cancelOrder mutation instead.
+───────────────────────────────────────── */
 @InputType()
 export class OrderUpdateInput {
 	@IsNotEmpty()
@@ -13,6 +22,9 @@ export class OrderUpdateInput {
 	orderStatus: OrderStatus;
 }
 
+/* ─────────────────────────────────────────
+   OrderCancelInput — cancel an order
+───────────────────────────────────────── */
 @InputType()
 export class OrderCancelInput {
 	@IsNotEmpty()

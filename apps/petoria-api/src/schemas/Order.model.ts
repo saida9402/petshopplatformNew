@@ -1,61 +1,88 @@
-import { Field, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
-import mongoose, { Schema } from 'mongoose';
+import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import mongoose, { Document } from 'mongoose';
 import { OrderItemStatus, OrderPaymentMethod, OrderStatus } from '../libs/enums/order.enum';
 
-// ─── registerEnumType FAQAT BIR MARTA — bu yerda ─────────────────────────────
-registerEnumType(OrderStatus, { name: 'OrderStatus' });
-registerEnumType(OrderItemStatus, { name: 'OrderItemStatus' });
-registerEnumType(OrderPaymentMethod, { name: 'OrderPaymentMethod' });
-
-// ═══════════════════════════════════════════════════════════════
-//  OBJECT TYPES
-// ═══════════════════════════════════════════════════════════════
-
+/* ─────────────────────────────────────────
+   OrderItem — individual product line in an order
+───────────────────────────────────────── */
 @ObjectType()
+@Schema({ _id: true, timestamps: false })
 export class OrderItem {
 	@Field(() => ID)
 	_id: mongoose.Types.ObjectId;
 
 	@Field(() => ID)
+	@Prop({ type: mongoose.Schema.Types.ObjectId, required: true })
 	productId: mongoose.Types.ObjectId;
 
 	@Field(() => Int)
+	@Prop({ type: Number, required: true, min: 1 })
 	itemQuantity: number;
 
 	@Field(() => Int)
+	@Prop({ type: Number, required: true, min: 0 })
 	itemPrice: number;
 
 	@Field(() => OrderItemStatus)
+	@Prop({
+		type: String,
+		enum: OrderItemStatus,
+		default: OrderItemStatus.PENDING,
+	})
 	itemStatus: OrderItemStatus;
 }
 
+export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
+
+/* ─────────────────────────────────────────
+   Order — main order document
+───────────────────────────────────────── */
 @ObjectType()
-export class Order {
+@Schema({ timestamps: true, collection: 'orders' })
+export class Order extends Document {
 	@Field(() => ID)
 	_id: mongoose.Types.ObjectId;
 
 	@Field(() => ID)
+	@Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true })
 	memberId: mongoose.Types.ObjectId;
 
 	@Field(() => [OrderItem])
+	@Prop({ type: [OrderItemSchema], required: true })
 	orderItems: OrderItem[];
 
 	@Field(() => Int)
+	@Prop({ type: Number, required: true, min: 0 })
 	orderTotal: number;
 
 	@Field(() => OrderStatus)
+	@Prop({
+		type: String,
+		enum: OrderStatus,
+		default: OrderStatus.PENDING,
+	})
 	orderStatus: OrderStatus;
 
 	@Field(() => OrderPaymentMethod)
+	@Prop({ type: String, enum: OrderPaymentMethod, required: true })
 	paymentMethod: OrderPaymentMethod;
 
-	@Field({ nullable: true })
-	orderAddress?: string;
+	@Field(() => String)
+	@Prop({ type: String, required: true, minlength: 5, maxlength: 200 })
+	orderAddress: string;
 
 	@Field({ nullable: true })
+	@Prop({ type: String, default: null, maxlength: 300 })
 	orderNote?: string;
 
+	/** Populated only when the order is cancelled via cancelOrder mutation */
 	@Field({ nullable: true })
+	@Prop({ type: String, default: null, maxlength: 300 })
+	cancelReason?: string;
+
+	@Field({ nullable: true })
+	@Prop({ type: Date, default: null })
 	cancelledAt?: Date;
 
 	@Field()
@@ -65,69 +92,8 @@ export class Order {
 	updatedAt: Date;
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  MONGOOSE SCHEMAS
-// ═══════════════════════════════════════════════════════════════
+export const OrderSchema = SchemaFactory.createForClass(Order);
 
-export const OrderItemSchema = new Schema(
-	{
-		productId: {
-			type: Schema.Types.ObjectId,
-			required: true,
-			ref: 'Product',
-		},
-		itemQuantity: {
-			type: Number,
-			required: true,
-			min: 1,
-		},
-		itemPrice: {
-			type: Number,
-			required: true,
-		},
-		itemStatus: {
-			type: String,
-			enum: Object.values(OrderItemStatus), // ✅ Object.values — massiv kerak
-			default: OrderItemStatus.ACTIVE,
-		},
-	},
-	{ _id: true },
-);
-
-export const OrderSchema = new Schema(
-	{
-		memberId: {
-			type: Schema.Types.ObjectId,
-			required: true,
-			ref: 'Member',
-		},
-		orderItems: {
-			type: [OrderItemSchema],
-			required: true,
-		},
-		orderTotal: {
-			type: Number,
-			required: true,
-		},
-		orderStatus: {
-			type: String,
-			enum: Object.values(OrderStatus), // ✅ Object.values
-			default: OrderStatus.PENDING,
-		},
-		paymentMethod: {
-			type: String,
-			enum: Object.values(OrderPaymentMethod), // ✅ Object.values
-			required: true,
-		},
-		orderAddress: {
-			type: String,
-		},
-		orderNote: {
-			type: String,
-		},
-		cancelledAt: {
-			type: Date,
-		},
-	},
-	{ timestamps: true, collection: 'orders' },
-);
+/* ── Indexes ── */
+OrderSchema.index({ memberId: 1, createdAt: -1 });
+OrderSchema.index({ orderStatus: 1 });
