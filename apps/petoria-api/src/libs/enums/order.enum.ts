@@ -1,11 +1,11 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum OrderStatus {
-	PENDING = 'PENDING', // Order placed, awaiting confirmation
-	PROCESS = 'PROCESS', // Being prepared
-	CONFIRM = 'CONFIRM', // Confirmed
-	DELIVERED = 'DELIVERED', // Delivered
-	CANCEL = 'CANCEL', // Cancelled
+	PENDING = 'PENDING',
+	PROCESS = 'PROCESS',
+	CONFIRM = 'CONFIRM',
+	DELIVERED = 'DELIVERED',
+	CANCEL = 'CANCEL',
 }
 
 export enum OrderItemStatus {
@@ -17,14 +17,14 @@ export enum OrderItemStatus {
 }
 
 export enum OrderPaymentMethod {
-	CREDIT_CARD = 'CREDIT_CARD', // Visa / MasterCard / Amex
-	DEBIT_CARD = 'DEBIT_CARD', // Debit karta
-	CASH = 'CASH', // Naqd pul (delivery vaqtida)
-	PAYPAL = 'PAYPAL', // PayPal
-	STRIPE = 'STRIPE', // Stripe
-	APPLE_PAY = 'APPLE_PAY', // Apple Pay
-	GOOGLE_PAY = 'GOOGLE_PAY', // Google Pay
-	BANK_TRANSFER = 'BANK_TRANSFER', // Bank o'tkazmasi
+	CREDIT_CARD = 'CREDIT_CARD',
+	DEBIT_CARD = 'DEBIT_CARD',
+	CASH = 'CASH',
+	PAYPAL = 'PAYPAL',
+	STRIPE = 'STRIPE',
+	APPLE_PAY = 'APPLE_PAY',
+	GOOGLE_PAY = 'GOOGLE_PAY',
+	BANK_TRANSFER = 'BANK_TRANSFER',
 }
 
 registerEnumType(OrderStatus, {
