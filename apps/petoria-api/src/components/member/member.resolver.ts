@@ -73,7 +73,7 @@ export class MemberResolver {
 		@Args('input') input: SellersInquiry,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Members> {
-		console.log('Query: getAgents');
+		console.log('Query: getSellers');
 		return await this.memberService.getSellers(memberId, input);
 	}
 

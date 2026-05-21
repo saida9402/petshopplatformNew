@@ -57,7 +57,7 @@ export class ProductInput {
 	@Field(() => Number, { nullable: true })
 	productSalePercent?: number; // chegirma foizi
 
-	memberId?: ObjectId; // sotuvchi (agent) ID
+	memberId?: ObjectId; // sotuvchi ID
 
 	@IsOptional()
 	@Field(() => Date, { nullable: true })
@@ -135,17 +135,17 @@ export class ProductsInquiry {
 	search: PISearch;
 }
 
-// ─── Sotuvchi (Agent) uchun mahsulot qidirish ───────────────────────────────
+// ─── Sotuvchi uchun mahsulot qidirish ───────────────────────────────────────
 
 @InputType()
-class APISearch {
+class SPISearch {
 	@IsOptional()
 	@Field(() => ProductStatus, { nullable: true })
 	productStatus?: ProductStatus;
 }
 
 @InputType()
-export class AgentProductsInquiry {
+export class SellerProductsInquiry {
 	@IsNotEmpty()
 	@Min(1)
 	@Field(() => Int)
@@ -166,8 +166,8 @@ export class AgentProductsInquiry {
 	direction?: Direction;
 
 	@IsNotEmpty()
-	@Field(() => APISearch)
-	search: APISearch;
+	@Field(() => SPISearch)
+	search: SPISearch;
 }
 
 // ─── Admin uchun barcha mahsulotlarni qidirish ───────────────────────────────
@@ -185,6 +185,14 @@ class ALPISearch {
 	@IsOptional()
 	@Field(() => [ProductCategory], { nullable: true })
 	productCategoryList?: ProductCategory[];
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	memberId?: string;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	text?: string;
 }
 
 @InputType()

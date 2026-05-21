@@ -40,8 +40,8 @@ export class OrderDTO {
 	@Field(() => OrderPaymentMethod)
 	paymentMethod: OrderPaymentMethod;
 
-	@Field({ nullable: true })
-	orderAddress?: string;
+	@Field(() => String)
+	orderAddress: string;
 
 	@Field({ nullable: true })
 	orderNote?: string;

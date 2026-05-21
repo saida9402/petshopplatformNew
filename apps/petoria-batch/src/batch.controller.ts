@@ -1,7 +1,7 @@
 import { Controller, Get, Logger } from '@nestjs/common';
 import { BatchService } from './batch.service';
-import { Cron, Interval, Timeout } from '@nestjs/schedule';
-import { BATCH_ROLLBACK, BATCH_TOP_AGENTS, BATCH_TOP_PROPERTIES } from './lib/config';
+import { Cron, Timeout } from '@nestjs/schedule';
+import { BATCH_ROLLBACK, BATCH_TOP_PRODUCTS } from './lib/config';
 
 @Controller()
 export class BatchController {
@@ -25,34 +25,16 @@ export class BatchController {
 		}
 	}
 
-	@Cron('20 * * * * *', { name: BATCH_TOP_PROPERTIES })
-	public async batchTopProperties() {
+	@Cron('20 * * * * *', { name: BATCH_TOP_PRODUCTS })
+	public async batchTopProducts() {
 		try {
-			this.logger['context'] = BATCH_TOP_PROPERTIES;
+			this.logger['context'] = BATCH_TOP_PRODUCTS;
 			this.logger.debug('EXECUTED!');
-			await this.batchService.batchTopProperties();
+			await this.batchService.batchTopProducts();
 		} catch (err) {
 			this.logger.error(err);
 		}
 	}
-
-	@Cron('40 * * * * *', { name: BATCH_TOP_AGENTS })
-	public async batchTopAgents() {
-		try {
-			this.logger['context'] = BATCH_TOP_AGENTS;
-			this.logger.debug('EXECUTED!');
-			await this.batchService.batchTopAgents();
-		} catch (err) {
-			this.logger.error(err);
-		}
-	}
-
-	/*
-  @Interval(1000)
-  handleInterval() {
-    this.logger.debug('INTERVAL TEST');
-  }
-  */
 
 	@Get()
 	getHello(): string {

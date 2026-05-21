@@ -4,7 +4,7 @@ import { Product, Products } from '../../libs/dto/product/product';
 import {
 	ProductInput,
 	ProductsInquiry,
-	AgentProductsInquiry,
+	SellerProductsInquiry,
 	AllProductsInquiry,
 } from '../../libs/dto/product/product.input';
 import { ProductUpdate } from '../../libs/dto/product/product.update';
@@ -33,7 +33,7 @@ export class ProductResolver {
 	@Query(() => Products)
 	public async getSellerProducts(
 		@AuthMember('_id') memberId: ObjectId,
-		@Args('input') input: AgentProductsInquiry,
+		@Args('input') input: SellerProductsInquiry,
 	): Promise<Products> {
 		return await this.productService.getSellerProducts(memberId, input);
 	}

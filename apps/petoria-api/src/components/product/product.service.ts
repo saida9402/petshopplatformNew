@@ -4,7 +4,7 @@ import { Model, ObjectId } from 'mongoose';
 import {
 	ProductInput,
 	ProductsInquiry,
-	AgentProductsInquiry,
+	SellerProductsInquiry,
 	AllProductsInquiry,
 } from '../../libs/dto/product/product.input';
 import { ProductUpdate } from '../../libs/dto/product/product.update';
@@ -110,7 +110,7 @@ export class ProductService {
 	}
 
 	// ─── Sotuvchi o'z mahsulotlarini ko'radi ────────────────────────────────────
-	public async getSellerProducts(memberId: ObjectId, input: AgentProductsInquiry): Promise<Products> {
+	public async getSellerProducts(memberId: ObjectId, input: SellerProductsInquiry): Promise<Products> {
 		const { page, limit, sort, direction, search } = input;
 		const match: any = {
 			memberId,

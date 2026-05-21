@@ -39,23 +39,6 @@ export class BatchService {
 		await Promise.all(promisedList);
 	}
 
-	public async batchTopAgents(): Promise<void> {
-		const agents: Member[] = await this.memberModel
-			.find({
-				memberType: MemberType.SELLER,
-				memberStatus: MemberStatus.ACTIVE,
-				memberRank: 0,
-			})
-			.exec();
-
-		const promisedList = agents.map(async (ele: Member) => {
-			const { _id, memberProducts, memberLikes, memberArticles, memberViews } = ele;
-			const rank = memberProducts * 5 + memberArticles * 3 + memberLikes * 2 + memberViews * 1;
-			return await this.memberModel.findByIdAndUpdate(_id, { memberRank: rank });
-		});
-		await Promise.all(promisedList);
-	}
-
 	public getHello(): string {
 		return 'Welcome to Nestar BATCH Server!';
 	}
