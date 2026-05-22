@@ -56,6 +56,54 @@ const MemberSchema = new Schema(
 			type: String,
 		},
 
+		// ─── Seller store fields ──────────────────────────────────────────────────
+		storeName: {
+			type: String,
+		},
+
+		storeSlug: {
+			type: String,
+			index: { unique: true, sparse: true },
+		},
+
+		storeLogo: {
+			type: String,
+			default: '',
+		},
+
+		storeBanner: {
+			type: String,
+			default: '',
+		},
+
+		storeDesc: {
+			type: String,
+		},
+
+		storePhone: {
+			type: String,
+		},
+
+		storeEmail: {
+			type: String,
+		},
+
+		storeAddress: {
+			type: String,
+		},
+
+		storeSocials: {
+			instagram: { type: String },
+			facebook: { type: String },
+			youtube: { type: String },
+			telegram: { type: String },
+		},
+
+		sellerVerified: {
+			type: Boolean,
+			default: false,
+		},
+
 		memberProducts: {
 			type: Number,
 			default: 0,

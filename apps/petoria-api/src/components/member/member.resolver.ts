@@ -16,7 +16,7 @@ import { WithoutGuard } from '../auth/guards/without.guard';
 import { Message } from '../../libs/enums/common.enum';
 import { createWriteStream } from 'fs';
 import { GraphQLUpload, FileUpload } from 'graphql-upload';
-import { MemberUpdate } from '../../libs/dto/member/member.update';
+import { MemberUpdate, SellerUpdate } from '../../libs/dto/member/member.update';
 
 @Resolver()
 export class MemberResolver {
@@ -75,6 +75,29 @@ export class MemberResolver {
 	): Promise<Members> {
 		console.log('Query: getSellers');
 		return await this.memberService.getSellers(memberId, input);
+	}
+
+	@UseGuards(WithoutGuard)
+	@Query(() => Member)
+	public async getSellerById(
+		@Args('sellerId') sellerId: string,
+		@AuthMember('_id') memberId: ObjectId,
+	): Promise<Member> {
+		console.log('Query: getSellerById');
+		const targetId = shapeIntoMongoObjectId(sellerId);
+		return this.memberService.getSellerById(memberId, targetId);
+	}
+
+	@Roles(MemberType.SELLER)
+	@UseGuards(RolesGuard)
+	@Mutation(() => Member)
+	public async updateSellerProfile(
+		@Args('input') input: SellerUpdate,
+		@AuthMember('_id') memberId: ObjectId,
+	): Promise<Member> {
+		console.log('Mutation: updateSellerProfile');
+		delete input._id;
+		return this.memberService.updateSellerProfile(memberId, input);
 	}
 
 	@UseGuards(AuthGuard)

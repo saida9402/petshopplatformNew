@@ -5,6 +5,21 @@ import { MeLiked } from '../like/like';
 import { MeFollowed } from '../follow/follow';
 
 @ObjectType()
+export class StoreSocials {
+	@Field(() => String, { nullable: true })
+	instagram?: string;
+
+	@Field(() => String, { nullable: true })
+	facebook?: string;
+
+	@Field(() => String, { nullable: true })
+	youtube?: string;
+
+	@Field(() => String, { nullable: true })
+	telegram?: string;
+}
+
+@ObjectType()
 export class Member {
 	@Field(() => String)
 	_id: ObjectId;
@@ -37,6 +52,38 @@ export class Member {
 
 	@Field(() => String, { nullable: true })
 	memberDesc?: string;
+
+	// ─── Seller store fields ──────────────────────────────────────────────────
+
+	@Field(() => String, { nullable: true })
+	storeName?: string;
+
+	@Field(() => String, { nullable: true })
+	storeSlug?: string;
+
+	@Field(() => String, { nullable: true })
+	storeLogo?: string;
+
+	@Field(() => String, { nullable: true })
+	storeBanner?: string;
+
+	@Field(() => String, { nullable: true })
+	storeDesc?: string;
+
+	@Field(() => String, { nullable: true })
+	storePhone?: string;
+
+	@Field(() => String, { nullable: true })
+	storeEmail?: string;
+
+	@Field(() => String, { nullable: true })
+	storeAddress?: string;
+
+	@Field(() => StoreSocials, { nullable: true })
+	storeSocials?: StoreSocials;
+
+	@Field(() => Boolean, { nullable: true })
+	sellerVerified?: boolean;
 
 	@Field(() => Int)
 	memberProducts: number;

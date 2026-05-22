@@ -15,7 +15,7 @@ import { LikeInput } from '../../libs/dto/like/like.input';
 import { LikeService } from '../like/like.service';
 import { Follower, Following, MeFollowed } from '../../libs/dto/follow/follow';
 import { lookupAuthMemberLiked } from '../../libs/config';
-import { MemberUpdate } from '../../libs/dto/member/member.update';
+import { MemberUpdate, SellerUpdate } from '../../libs/dto/member/member.update';
 
 @Injectable()
 export class MemberService {
@@ -186,6 +186,50 @@ export class MemberService {
 		if (!result.length) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
 		return result[0];
+	}
+
+	public async getSellerById(memberId: ObjectId, sellerId: ObjectId): Promise<Member> {
+		const search: T = {
+			_id: sellerId,
+			memberType: MemberType.SELLER,
+			memberStatus: MemberStatus.ACTIVE,
+		};
+
+		const seller = await this.memberModel.findOne(search).lean().exec();
+		if (!seller) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+
+		if (memberId) {
+			const viewInput = { memberId, viewRefId: sellerId, viewGroup: ViewGroup.MEMBER };
+			const newView = await this.viewService.recordView(viewInput);
+			if (newView) {
+				await this.memberModel.findOneAndUpdate(search, { $inc: { memberViews: 1 } }, { new: true }).exec();
+				seller.memberViews++;
+			}
+
+			const likeInput = { memberId, likeRefId: sellerId, likeGroup: LikeGroup.MEMBER };
+			seller.meLiked = await this.likeService.checkLikeExistence(likeInput);
+			seller.meFollowed = await this.checkSubscription(memberId, sellerId);
+		}
+
+		return seller;
+	}
+
+	public async updateSellerProfile(memberId: ObjectId, input: SellerUpdate): Promise<Member> {
+		const result: Member = await this.memberModel
+			.findOneAndUpdate(
+				{
+					_id: memberId,
+					memberType: MemberType.SELLER,
+					memberStatus: MemberStatus.ACTIVE,
+				},
+				input,
+				{ new: true },
+			)
+			.exec();
+
+		if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);
+		result.accessToken = await this.authService.createToken(result);
+		return result;
 	}
 
 	public async updateMemberByAdmin(input: MemberUpdate): Promise<Member> {

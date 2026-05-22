@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsNotEmpty, IsOptional, Length } from 'class-validator';
-import { MemberAuthType, MemberStatus, MemberType } from '../../enums/member.enum';
+import { MemberStatus, MemberType } from '../../enums/member.enum';
 import { ObjectId } from 'mongoose';
 
 @InputType()
@@ -49,4 +49,73 @@ export class MemberUpdate {
 	memberDesc?: string;
 
 	deletedAt?: Date;
+}
+
+// ─── Seller store socials sub-input ──────────────────────────────────────────
+
+@InputType()
+export class StoreSocialsInput {
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	instagram?: string;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	facebook?: string;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	youtube?: string;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	telegram?: string;
+}
+
+// ─── Seller profile update input ─────────────────────────────────────────────
+
+@InputType()
+export class SellerUpdate {
+	@IsNotEmpty()
+	@Field(() => String)
+	_id: ObjectId;
+
+	@IsOptional()
+	@Length(2, 100)
+	@Field(() => String, { nullable: true })
+	storeName?: string;
+
+	@IsOptional()
+	@Length(2, 50)
+	@Field(() => String, { nullable: true })
+	storeSlug?: string;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	storeLogo?: string;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	storeBanner?: string;
+
+	@IsOptional()
+	@Length(5, 1000)
+	@Field(() => String, { nullable: true })
+	storeDesc?: string;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	storePhone?: string;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	storeEmail?: string;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	storeAddress?: string;
+
+	@IsOptional()
+	@Field(() => StoreSocialsInput, { nullable: true })
+	storeSocials?: StoreSocialsInput;
 }
