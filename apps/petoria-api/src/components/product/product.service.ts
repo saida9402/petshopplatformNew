@@ -13,12 +13,16 @@ import { ProductStatus } from '../../libs/enums/product.enum';
 import { Message } from '../../libs/enums/common.enum';
 import { Direction } from '../../libs/enums/common.enum';
 import { lookupAuthMemberLiked, lookupMember, shapeIntoMongoObjectId } from '../../libs/config';
+import { LikeService } from '../like/like.service';
+import { LikeGroup } from '../../libs/enums/like.enum';
+import { LikeInput } from '../../libs/dto/like/like.input';
 
 @Injectable()
 export class ProductService {
 	constructor(
 		@InjectModel('Product')
 		private readonly productModel: Model<Product>,
+		private likeService: LikeService,
 	) {}
 
 	// ─── Sotuvchi yangi mahsulot qo'shadi ────────────────────────────────────────
@@ -64,7 +68,7 @@ export class ProductService {
 	// ─── Foydalanuvchi mahsulotlarni qidiradi (shop sahifasi) ───────────────────
 	public async getProducts(memberId: ObjectId, input: ProductsInquiry): Promise<Products> {
 		const { page, limit, sort, direction, search } = input;
-		const match: any = { productStatus: ProductStatus.ACTIVE };
+		const match: any = { productStatus: search.productStatus ?? ProductStatus.ACTIVE };
 
 		if (search.typeList?.length) match.productType = { $in: search.typeList };
 		if (search.categoryList?.length) match.productCategory = { $in: search.categoryList };
@@ -195,6 +199,30 @@ export class ProductService {
 		const result = await this.productModel.findByIdAndUpdate(_id, { productStatus, ...rest }, { new: true }).exec();
 
 		if (!result) throw new BadRequestException(Message.UPDATE_FAILED);
+		return result;
+	}
+
+	// ─── Like toggle ────────────────────────────────────────────────────────────
+	public async likeTargetProduct(memberId: ObjectId, likeRefId: ObjectId): Promise<Product> {
+		const target = await this.productModel
+			.findOne({ _id: likeRefId, productStatus: ProductStatus.ACTIVE })
+			.exec();
+		if (!target) throw new NotFoundException(Message.NO_DATA_FOUND);
+
+		const input: LikeInput = {
+			memberId: memberId,
+			likeRefId: likeRefId,
+			likeGroup: LikeGroup.PRODUCT,
+		};
+
+		const modifier: number = await this.likeService.toggleLike(input);
+		const result = await this.productStatsEditor({
+			_id: likeRefId,
+			targetKey: 'productLikes',
+			modifier: modifier,
+		});
+
+		if (!result) throw new BadRequestException(Message.SOMETHING_WENT_WRONG);
 		return result;
 	}
 

@@ -1,13 +1,14 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { FollowService } from './follow.service';
 import { Follower, Followers, Followings } from '../../libs/dto/follow/follow';
-import { ObjectId } from 'mongoose';
+import { isValidObjectId, ObjectId } from 'mongoose';
 import { AuthMember } from '../auth/decorators/authMember.decorator';
-import { UseGuards } from '@nestjs/common';
+import { BadRequestException, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { shapeIntoMongoObjectId } from '../../libs/config';
 import { WithoutGuard } from '../auth/guards/without.guard';
 import { FollowInquiry } from '../../libs/dto/follow/follow.input';
+import { Message } from '../../libs/enums/common.enum';
 
 @Resolver()
 export class FollowResolver {
@@ -38,10 +39,13 @@ export class FollowResolver {
 	@Query((returns) => Followings)
 	public async getMemberFollowings(
 		@Args('input') input: FollowInquiry,
-		@AuthMember('_id') memberId: ObjectId, //
+		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Followings> {
 		console.log('Query: getMemberFollowings');
 		const { followerId } = input.search;
+		if (!followerId || !isValidObjectId(String(followerId))) {
+			throw new BadRequestException(Message.BAD_REQUEST);
+		}
 		input.search.followerId = shapeIntoMongoObjectId(followerId);
 		return await this.followService.getMemberFollowings(memberId, input);
 	}
@@ -50,10 +54,13 @@ export class FollowResolver {
 	@Query((returns) => Followers)
 	public async getMemberFollowers(
 		@Args('input') input: FollowInquiry,
-		@AuthMember('_id') memberId: ObjectId, //
+		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Followers> {
 		console.log('Query: getMemberFollowers');
 		const { followingId } = input.search;
+		if (!followingId || !isValidObjectId(String(followingId))) {
+			throw new BadRequestException(Message.BAD_REQUEST);
+		}
 		input.search.followingId = shapeIntoMongoObjectId(followingId);
 		return await this.followService.getMemberFollowers(memberId, input);
 	}

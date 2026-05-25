@@ -1,5 +1,5 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { LikeService } from './like.service';
+import { ViewService } from './view.service';
 import { UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { AuthMember } from '../auth/decorators/authMember.decorator';
@@ -8,16 +8,16 @@ import { OrdinaryInquiry } from '../../libs/dto/product/product.input';
 import { Products } from '../../libs/dto/product/product';
 
 @Resolver()
-export class LikeResolver {
-	constructor(private readonly likeService: LikeService) {}
+export class ViewResolver {
+	constructor(private readonly viewService: ViewService) {}
 
 	@UseGuards(AuthGuard)
 	@Query(() => Products)
-	public async getFavorites(
+	public async getVisited(
 		@Args('input') input: OrdinaryInquiry,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Products> {
-		console.log('Query: getFavorites');
-		return await this.likeService.getFavoriteProducts(memberId, input);
+		console.log('Query: getVisited');
+		return await this.viewService.getVisitedProducts(memberId, input);
 	}
 }

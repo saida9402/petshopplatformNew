@@ -6,7 +6,7 @@ import { View } from '../../libs/dto/member/view/view';
 import { ViewInput } from '../../libs/dto/member/view/view.input';
 import { T } from '../../libs/types/common';
 
-import { Product } from '../../libs/dto/product/product';
+import { Products } from '../../libs/dto/product/product';
 import { OrdinaryInquiry } from '../../libs/dto/product/product.input';
 
 import { ViewGroup } from '../../libs/enums/view.enum';
@@ -38,10 +38,7 @@ export class ViewService {
 	// ============================================================
 	// GET VISITED PRODUCTS
 	// ============================================================
-	public async getVisitedProducts(
-		memberId: ObjectId,
-		input: OrdinaryInquiry,
-	): Promise<{ list: Product[]; metaCounter: any }> {
+	public async getVisitedProducts(memberId: ObjectId, input: OrdinaryInquiry): Promise<Products> {
 		const { page, limit } = input;
 
 		const match: T = {

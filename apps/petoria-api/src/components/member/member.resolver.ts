@@ -15,6 +15,7 @@ import { getSerialForImage, shapeIntoMongoObjectId, validMimeTypes } from '../..
 import { WithoutGuard } from '../auth/guards/without.guard';
 import { Message } from '../../libs/enums/common.enum';
 import { createWriteStream } from 'fs';
+import * as path from 'path';
 import { GraphQLUpload, FileUpload } from 'graphql-upload';
 import { MemberUpdate, SellerUpdate } from '../../libs/dto/member/member.update';
 
@@ -150,25 +151,42 @@ export class MemberResolver {
 		{ createReadStream, filename, mimetype }: FileUpload,
 		@Args('target') target: String,
 	): Promise<string> {
-		console.log('Mutation: imageUploader');
+		console.log('FILE_RECEIVED', { filename, mimetype });
+		console.log('UPLOAD_TARGET', target);
 
-		if (!filename) throw new Error(Message.UPLOAD_FAILED);
+		if (!filename) {
+			console.error('UPLOAD_FAILURE', 'missing filename');
+			throw new Error(Message.UPLOAD_FAILED);
+		}
 		const validMime = validMimeTypes.includes(mimetype);
-		if (!validMime) throw new Error(Message.PROVIDE_ALLOWED_FORMAT);
+		if (!validMime) {
+			console.error('UPLOAD_FAILURE', 'invalid mime', mimetype);
+			throw new Error(Message.PROVIDE_ALLOWED_FORMAT);
+		}
 
 		const imageName = getSerialForImage(filename);
-		const url = `uploads/${target}/${imageName}`;
+		const relativePath = `uploads/${target}/${imageName}`;
+		const absolutePath = path.join(process.cwd(), relativePath);
 		const stream = createReadStream();
+
+		console.log('UPLOAD_PATH', { relativePath, absolutePath });
 
 		const result = await new Promise((resolve, reject) => {
 			stream
-				.pipe(createWriteStream(url))
-				.on('finish', async () => resolve(true))
-				.on('error', () => reject(false));
+				.pipe(createWriteStream(absolutePath))
+				.on('finish', () => resolve(true))
+				.on('error', (err) => {
+					console.error('UPLOAD_FAILURE', 'write error', err);
+					reject(false);
+				});
 		});
-		if (!result) throw new Error(Message.UPLOAD_FAILED);
+		if (!result) {
+			console.error('UPLOAD_FAILURE', 'no result');
+			throw new Error(Message.UPLOAD_FAILED);
+		}
 
-		return url;
+		console.log('UPLOAD_SUCCESS', relativePath);
+		return relativePath;
 	}
 
 	@UseGuards(AuthGuard)
@@ -183,24 +201,28 @@ export class MemberResolver {
 		const uploadedImages = [];
 		const promisedList = files.map(async (img: Promise<FileUpload>, index: number): Promise<Promise<void>> => {
 			try {
-				const { filename, mimetype, encoding, createReadStream } = await img;
+				const { filename, mimetype, createReadStream } = await img;
 
 				const validMime = validMimeTypes.includes(mimetype);
 				if (!validMime) throw new Error(Message.PROVIDE_ALLOWED_FORMAT);
 
 				const imageName = getSerialForImage(filename);
-				const url = `uploads/${target}/${imageName}`;
+				const relativePath = `uploads/${target}/${imageName}`;
+				const absolutePath = path.join(process.cwd(), relativePath);
 				const stream = createReadStream();
 
 				const result = await new Promise((resolve, reject) => {
 					stream
-						.pipe(createWriteStream(url))
+						.pipe(createWriteStream(absolutePath))
 						.on('finish', () => resolve(true))
-						.on('error', () => reject(false));
+						.on('error', (err) => {
+							console.error('[imagesUploader] Write error:', err);
+							reject(false);
+						});
 				});
 				if (!result) throw new Error(Message.UPLOAD_FAILED);
 
-				uploadedImages[index] = url;
+				uploadedImages[index] = relativePath;
 			} catch (err) {
 				console.log('Error, file missing!');
 			}

@@ -80,8 +80,12 @@ export class PricesRange {
 @InputType()
 class PISearch {
 	@IsOptional()
+	@Field(() => ProductStatus, { nullable: true })
+	productStatus?: ProductStatus;
+
+	@IsOptional()
 	@Field(() => String, { nullable: true })
-	memberId?: string; // ✅ GraphQL da string sifatida keladi
+	memberId?: string;
 
 	@IsOptional()
 	@Field(() => [ProductType], { nullable: true })
