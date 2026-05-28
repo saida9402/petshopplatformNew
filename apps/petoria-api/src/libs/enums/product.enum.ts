@@ -20,10 +20,10 @@ registerEnumType(ProductStatus, {
 });
 
 export enum ProductCategory {
-	FOOD = 'FOOD', // Ovqat
-	MEDICINE = 'MEDICINE', // Dorilar
-	ACCESSORY = 'ACCESSORY', // Aksessuarlar
-	TOY = 'TOY', // O'yinchoqlar
+	FOOD = 'FOOD',
+	MEDICINE = 'MEDICINE',
+	ACCESSORY = 'ACCESSORY',
+	TOY = 'TOY',
 	STROLLER = 'STROLLER',
 }
 registerEnumType(ProductCategory, {

@@ -57,3 +57,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 #Images
 uploads
+seed.js
+seed-articles.js
+download-images.js
