@@ -16,6 +16,8 @@ import { lookupAuthMemberLiked, lookupMember, shapeIntoMongoObjectId } from '../
 import { LikeService } from '../like/like.service';
 import { LikeGroup } from '../../libs/enums/like.enum';
 import { LikeInput } from '../../libs/dto/like/like.input';
+import { ViewService } from '../view/view.service';
+import { ViewGroup } from '../../libs/enums/view.enum';
 
 @Injectable()
 export class ProductService {
@@ -23,6 +25,7 @@ export class ProductService {
 		@InjectModel('Product')
 		private readonly productModel: Model<Product>,
 		private likeService: LikeService,
+		private viewService: ViewService,
 	) {}
 
 	// ─── Sotuvchi yangi mahsulot qo'shadi ────────────────────────────────────────
@@ -39,6 +42,32 @@ export class ProductService {
 	}
 
 	// ─── Bitta mahsulotni olish (view++ bilan) ───────────────────────────────────
+	// public async getProduct(memberId: ObjectId, productId: ObjectId): Promise<Product> {
+	// 	const search: any = {
+	// 		_id: productId,
+	// 		productStatus: ProductStatus.ACTIVE,
+	// 	};
+
+	// 	const targetProduct = await this.productModel.findOne(search).lean().exec();
+	// 	if (!targetProduct) throw new NotFoundException(Message.NO_DATA_FOUND);
+
+	// 	// Ko'rishlar sonini oshirish
+	// 	await this.productStatsEditor({ _id: productId, targetKey: 'productViews', modifier: 1 });
+
+	// 	// aggregation: memberData + meLiked
+	// 	const result = await this.productModel
+	// 		.aggregate([
+	// 			{ $match: search },
+	// 			lookupMember,
+	// 			{ $unwind: '$memberData' },
+	// 			...(memberId ? [lookupAuthMemberLiked(memberId)] : []),
+	// 		])
+	// 		.exec();
+
+	// 	if (!result.length) throw new NotFoundException(Message.NO_DATA_FOUND);
+	// 	return result[0];
+	// }
+
 	public async getProduct(memberId: ObjectId, productId: ObjectId): Promise<Product> {
 		const search: any = {
 			_id: productId,
@@ -48,10 +77,22 @@ export class ProductService {
 		const targetProduct = await this.productModel.findOne(search).lean().exec();
 		if (!targetProduct) throw new NotFoundException(Message.NO_DATA_FOUND);
 
-		// Ko'rishlar sonini oshirish
-		await this.productStatsEditor({ _id: productId, targetKey: 'productViews', modifier: 1 });
+		// ✅ Faqat login qilgan user bo'lsa va yangi view bo'lsa oshiradi
+		if (memberId) {
+			const viewInput = {
+				memberId,
+				viewRefId: productId,
+				viewGroup: ViewGroup.PRODUCT,
+			};
+			const newView = await this.viewService.recordView(viewInput);
+			if (newView) {
+				await this.productStatsEditor({ _id: productId, targetKey: 'productViews', modifier: 1 });
+			}
+		} else {
+			// ✅ Guest user bo'lsa har doim +1 (yoki siz xohlagancha)
+			await this.productStatsEditor({ _id: productId, targetKey: 'productViews', modifier: 1 });
+		}
 
-		// aggregation: memberData + meLiked
 		const result = await this.productModel
 			.aggregate([
 				{ $match: search },
@@ -204,9 +245,7 @@ export class ProductService {
 
 	// ─── Like toggle ────────────────────────────────────────────────────────────
 	public async likeTargetProduct(memberId: ObjectId, likeRefId: ObjectId): Promise<Product> {
-		const target = await this.productModel
-			.findOne({ _id: likeRefId, productStatus: ProductStatus.ACTIVE })
-			.exec();
+		const target = await this.productModel.findOne({ _id: likeRefId, productStatus: ProductStatus.ACTIVE }).exec();
 		if (!target) throw new NotFoundException(Message.NO_DATA_FOUND);
 
 		const input: LikeInput = {

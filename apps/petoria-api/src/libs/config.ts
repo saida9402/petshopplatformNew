@@ -32,6 +32,10 @@ export const availableBrands = [
 	'Furminator',
 	'Kong',
 	'PetStyle',
+	'Trixie',
+	'Ferplast',
+	'Catit',
+	'Ibiyaya',
 ];
 
 // ─── Image konfiguratsiyasi ───────────────────────────────────────────────────

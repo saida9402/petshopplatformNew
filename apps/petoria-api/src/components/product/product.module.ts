@@ -5,6 +5,7 @@ import { ProductService } from './product.service';
 import ProductSchema from '../../schemas/Product.model';
 import { AuthModule } from '../auth/auth.module';
 import { LikeModule } from '../like/like.module';
+import { ViewModule } from '../view/view.module';
 
 @Module({
 	imports: [
@@ -16,6 +17,7 @@ import { LikeModule } from '../like/like.module';
 		]),
 		AuthModule,
 		LikeModule,
+		ViewModule,
 	],
 	providers: [ProductResolver, ProductService],
 	exports: [ProductService],

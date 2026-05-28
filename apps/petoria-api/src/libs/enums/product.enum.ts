@@ -24,6 +24,7 @@ export enum ProductCategory {
 	MEDICINE = 'MEDICINE', // Dorilar
 	ACCESSORY = 'ACCESSORY', // Aksessuarlar
 	TOY = 'TOY', // O'yinchoqlar
+	STROLLER = 'STROLLER',
 }
 registerEnumType(ProductCategory, {
 	name: 'ProductCategory',
