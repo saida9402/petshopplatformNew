@@ -18,12 +18,15 @@ import { LikeGroup } from '../../libs/enums/like.enum';
 import { LikeInput } from '../../libs/dto/like/like.input';
 import { ViewService } from '../view/view.service';
 import { ViewGroup } from '../../libs/enums/view.enum';
+import { Member } from '../../libs/dto/member/member';
 
 @Injectable()
 export class ProductService {
 	constructor(
 		@InjectModel('Product')
 		private readonly productModel: Model<Product>,
+		@InjectModel('Member')
+		private readonly memberModel: Model<Member>,
 		private likeService: LikeService,
 		private viewService: ViewService,
 	) {}
@@ -32,13 +35,21 @@ export class ProductService {
 	public async createProduct(memberId: ObjectId, input: ProductInput): Promise<Product> {
 		input.memberId = memberId;
 
+		let result: Product;
 		try {
-			const result = await this.productModel.create(input);
-			return result;
+			result = await this.productModel.create(input);
 		} catch (err) {
 			console.log('Error ProductService.createProduct:', err.message);
 			throw new BadRequestException(Message.CREATE_FAILED);
 		}
+
+		try {
+			await this.memberModel.findByIdAndUpdate(memberId, { $inc: { memberProducts: 1 } }).exec();
+		} catch (err) {
+			console.log('Error ProductService.createProduct [memberProducts increment]:', err.message);
+		}
+
+		return result;
 	}
 
 	// ─── Bitta mahsulotni olish (view++ bilan) ───────────────────────────────────
@@ -200,6 +211,16 @@ export class ProductService {
 		const result = await this.productModel.findByIdAndUpdate(_id, { productStatus, ...rest }, { new: true }).exec();
 
 		if (!result) throw new BadRequestException(Message.UPDATE_FAILED);
+
+		// Decrement seller's counter only when transitioning into DELETE
+		// if (productStatus === ProductStatus.DELETE && existing.productStatus !== ProductStatus.DELETE) {
+		// 	try {
+		// 		await this.memberModel.findByIdAndUpdate(memberId, { $inc: { memberProducts: -1 } }).exec();
+		// 	} catch (err) {
+		// 		console.log('Error ProductService.updateProduct [memberProducts decrement]:', err.message);
+		// 	}
+		// } keremas
+
 		return result;
 	}
 
@@ -234,12 +255,25 @@ export class ProductService {
 	public async updateProductByAdmin(input: ProductUpdate): Promise<Product> {
 		const { _id, productStatus, ...rest } = input;
 
+		const existing = await this.productModel.findById(_id).exec();
+		if (!existing) throw new NotFoundException(Message.NO_DATA_FOUND);
+
 		if (productStatus === ProductStatus.SOLD) (rest as any).soldAt = new Date();
 		if (productStatus === ProductStatus.DELETE) (rest as any).deletedAt = new Date();
 
 		const result = await this.productModel.findByIdAndUpdate(_id, { productStatus, ...rest }, { new: true }).exec();
 
 		if (!result) throw new BadRequestException(Message.UPDATE_FAILED);
+
+		// Decrement seller's counter only when transitioning into DELETE
+		if (productStatus === ProductStatus.DELETE && existing.productStatus !== ProductStatus.DELETE) {
+			try {
+				await this.memberModel.findByIdAndUpdate(existing.memberId, { $inc: { memberProducts: -1 } }).exec();
+			} catch (err) {
+				console.log('Error ProductService.updateProductByAdmin [memberProducts decrement]:', err.message);
+			}
+		}
+
 		return result;
 	}
 
