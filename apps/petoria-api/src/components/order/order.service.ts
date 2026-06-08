@@ -1,8 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { OrderItemStatus, OrderStatus } from '../../libs/enums/order.enum';
 import { MemberType } from '../../libs/enums/member.enum';
+import { ProductStatus } from '../../libs/enums/product.enum';
 import { Order } from '../../schemas/Order.model';
 import { OrderInput } from '../../libs/dto/order/order.input';
 import { OrderCancelInput, OrderUpdateInput } from '../../libs/dto/order/order.update';
@@ -24,19 +25,28 @@ export class OrderService {
 			throw new BadRequestException('At least one order item is required');
 		}
 
-		/**
-		 * orderTotal is always calculated server-side.
-		 * Client-provided itemPrice values pass validation but
-		 * the final total is computed here to prevent tampering.
-		 */
-		const orderTotal = input.orderItems.reduce((sum, item) => sum + item.itemPrice * item.itemQuantity, 0);
+		// DI-002: fetch authoritative prices from DB — ignore client-supplied itemPrice entirely
+		const productObjectIds = input.orderItems.map((item) => new Types.ObjectId(item.productId));
+		const products = await this.productModel
+			.find({ _id: { $in: productObjectIds }, productStatus: ProductStatus.ACTIVE })
+			.exec();
+
+		const priceMap = new Map<string, number>(products.map((p) => [p._id.toString(), p.productPrice]));
+
+		for (const item of input.orderItems) {
+			if (!priceMap.has(new Types.ObjectId(item.productId).toString())) {
+				throw new BadRequestException(`Product ${item.productId} is not available`);
+			}
+		}
 
 		const orderItems = input.orderItems.map((item) => ({
 			productId: item.productId,
 			itemQuantity: item.itemQuantity,
-			itemPrice: item.itemPrice,
-			itemStatus: OrderItemStatus.PENDING, // always set server-side
+			itemPrice: priceMap.get(new Types.ObjectId(item.productId).toString()),
+			itemStatus: OrderItemStatus.PENDING,
 		}));
+
+		const orderTotal = orderItems.reduce((sum, item) => sum + item.itemPrice * item.itemQuantity, 0);
 
 		try {
 			const result = await this.orderModel.create({

@@ -64,6 +64,15 @@ export class MemberService {
 	}
 
 	public async updateMember(memberId: ObjectId, input: MemberUpdate): Promise<Member> {
+		// AUTHZ-001: strip privileged fields — only admins may change role or status
+		delete (input as any).memberType;
+		delete (input as any).memberStatus;
+
+		// AUTHZ-002: hash password before persistence if it is being updated
+		if (input.memberPassword) {
+			input.memberPassword = await this.authService.hashPassword(input.memberPassword);
+		}
+
 		const result: Member = await this.memberModel
 			.findOneAndUpdate(
 				{
@@ -231,6 +240,11 @@ export class MemberService {
 	}
 
 	public async updateMemberByAdmin(input: MemberUpdate): Promise<Member> {
+		// AUTHZ-003: hash password before persistence if it is being updated
+		if (input.memberPassword) {
+			input.memberPassword = await this.authService.hashPassword(input.memberPassword);
+		}
+
 		const result: Member = await this.memberModel.findOneAndUpdate({ _id: input._id }, input, { new: true }).exec();
 
 		if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);

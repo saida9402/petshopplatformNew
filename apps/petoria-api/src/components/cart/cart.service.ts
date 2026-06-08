@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Cart } from '../../schemas/Cart.model';
 import { CartStatus } from '../../libs/enums/cart.enum';
+import { ProductStatus } from '../../libs/enums/product.enum';
 import { CartItemInput } from '../../libs/dto/cart/cart.input';
 import { UpdateCartItemInput, RemoveCartItemInput } from '../../libs/dto/cart/cart.update';
 import { Message } from '../../libs/enums/common.enum';
@@ -14,6 +15,8 @@ export class CartService {
 	constructor(
 		@InjectModel('Cart')
 		private readonly cartModel: Model<Cart>,
+		@InjectModel('Product')
+		private readonly productModel: Model<any>,
 	) {}
 
 	/* ── private helper ── */
@@ -25,6 +28,15 @@ export class CartService {
 	   ADD ITEM — add or increment a product
 	══════════════════════════════════════════ */
 	public async addToCart(memberId: string, input: CartItemInput): Promise<Cart> {
+		const productObjId = new Types.ObjectId(input.productId);
+
+		// DI-001: fetch authoritative price from DB — ignore client-supplied itemPrice
+		const product = await this.productModel
+			.findOne({ _id: productObjId, productStatus: ProductStatus.ACTIVE })
+			.exec();
+		if (!product) throw new NotFoundException('Product not found or not available');
+		const authorizedPrice: number = product.productPrice;
+
 		try {
 			let cart = await this.cartModel
 				.findOne({ memberId, cartStatus: CartStatus.ACTIVE })
@@ -39,18 +51,17 @@ export class CartService {
 				});
 			}
 
-			const productObjId = new Types.ObjectId(input.productId);
 			const existingIdx = cart.cartItems.findIndex((i) => i.productId.toString() === productObjId.toString());
 
 			if (existingIdx >= 0) {
 				cart.cartItems[existingIdx].itemQuantity += input.itemQuantity;
-				cart.cartItems[existingIdx].itemPrice = input.itemPrice;
+				cart.cartItems[existingIdx].itemPrice = authorizedPrice;
 			} else {
 				cart.cartItems.push({
 					productId: productObjId,
 					productName: input.productName,
 					productImage: input.productImage ?? null,
-					itemPrice: input.itemPrice,
+					itemPrice: authorizedPrice,
 					itemQuantity: input.itemQuantity,
 				} as any);
 			}
@@ -58,6 +69,7 @@ export class CartService {
 			cart.cartTotal = this.calcTotal(cart.cartItems);
 			return cart.save();
 		} catch (err) {
+			if (err instanceof NotFoundException) throw err;
 			this.logger.error('addToCart failed', err.message);
 			throw new BadRequestException(Message.BAD_REQUEST);
 		}
