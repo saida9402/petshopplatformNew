@@ -39,6 +39,7 @@ export class Member {
 	@Field(() => String)
 	memberNick: string;
 
+	// Not exposed via @Field — internal use only (login password comparison)
 	memberPassword?: string;
 
 	@Field(() => String, { nullable: true })

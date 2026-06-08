@@ -3,10 +3,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { CartSchema } from '../../schemas/Cart.model';
 import { CartResolver } from './cart.resolver';
 import { CartService } from './cart.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-	imports: [MongooseModule.forFeature([{ name: 'Cart', schema: CartSchema }])],
+	imports: [MongooseModule.forFeature([{ name: 'Cart', schema: CartSchema }]), AuthModule],
 	providers: [CartResolver, CartService],
-	exports: [CartService], // exported for OrderService.checkoutCart()
+	exports: [CartService],
 })
 export class CartModule {}

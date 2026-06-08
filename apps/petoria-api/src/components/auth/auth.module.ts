@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
-import { HttpModule } from '@nestjs/axios';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
 	imports: [
-		HttpModule,
-		JwtModule.register({
-			secret: `${process.env.SECRET_TOKEN}`,
-			signOptions: { expiresIn: '30d' },
+		JwtModule.registerAsync({
+			imports: [ConfigModule],
+			useFactory: (config: ConfigService) => ({
+				secret: config.get<string>('SECRET_TOKEN'),
+				signOptions: { expiresIn: '30d' },
+			}),
+			inject: [ConfigService],
 		}),
 	],
 	providers: [AuthService],

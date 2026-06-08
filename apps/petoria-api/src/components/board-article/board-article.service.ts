@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
 import { ViewService } from '../view/view.service';
@@ -21,6 +21,8 @@ import { LikeInput } from '../../libs/dto/like/like.input';
 
 @Injectable()
 export class BoardArticleService {
+	private readonly logger = new Logger(BoardArticleService.name);
+
 	constructor(
 		@InjectModel('BoardArticle') private readonly boardArticleModel: Model<BoardArticle>,
 		private readonly memberService: MemberService,
@@ -41,7 +43,7 @@ export class BoardArticleService {
 
 			return result;
 		} catch (err) {
-			console.log('Error, Service.model:', err.message); // db validationdagi errorni o'zimizaga chiqazadi
+			this.logger.error('createBoardArticle failed', err.message);
 			throw new BadRequestException(Message.CREATE_FAILED);
 		}
 	}
@@ -101,8 +103,6 @@ export class BoardArticleService {
 		if (input.search?.memberId) {
 			match.memberId = shapeIntoMongoObjectId(input.search.memberId);
 		}
-
-		console.log('match:', match);
 
 		const result = await this.boardArticleModel
 			.aggregate([

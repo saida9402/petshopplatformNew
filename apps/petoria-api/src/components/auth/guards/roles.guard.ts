@@ -1,10 +1,12 @@
-import { BadRequestException, CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, CanActivate, ExecutionContext, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthService } from '../auth.service';
 import { Message } from 'apps/petoria-api/src/libs/enums/common.enum';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
+	private readonly logger = new Logger(RolesGuard.name);
+
 	constructor(
 		private reflector: Reflector,
 		private authService: AuthService,
@@ -13,8 +15,6 @@ export class RolesGuard implements CanActivate {
 	async canActivate(context: ExecutionContext | any): Promise<boolean> {
 		const roles = this.reflector.get<string[]>('roles', context.getHandler());
 		if (!roles) return true;
-
-		console.info(`--- @guard() Authentication [RolesGuard]: ${roles} ---`);
 
 		if (context.contextType === 'graphql') {
 			const request = context.getArgByIndex(2).req;
@@ -28,7 +28,7 @@ export class RolesGuard implements CanActivate {
 
 			if (!authMember || !hasPermission) throw new ForbiddenException(Message.ONLY_SPECIFIC_ROLES_ALLOWED);
 
-			console.log('memberNick[roles] =>', authMember.memberNick);
+			this.logger.debug(`RolesGuard passed [${roles}]: ${authMember.memberNick}`);
 			request.body.authMember = authMember;
 			return true;
 		}

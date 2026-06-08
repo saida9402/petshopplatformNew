@@ -111,5 +111,7 @@ ProductSchema.index(
 	{ productType: 1, productCategory: 1, productBrand: 1, productStatus: 1 },
 	{ name: 'type-category-brand-status' },
 );
+ProductSchema.index({ memberId: 1 });
+ProductSchema.index({ productStatus: 1 });
 
 export default ProductSchema;

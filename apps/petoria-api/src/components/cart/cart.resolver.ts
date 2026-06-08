@@ -1,8 +1,12 @@
 import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { Cart } from '../../schemas/Cart.model';
 import { CartItemInput } from '../../libs/dto/cart/cart.input';
 import { UpdateCartItemInput, RemoveCartItemInput } from '../../libs/dto/cart/cart.update';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { AuthMember } from '../auth/decorators/authMember.decorator';
+import { ObjectId } from 'mongoose';
 
 @Resolver(() => Cart)
 export class CartResolver {
@@ -10,90 +14,47 @@ export class CartResolver {
 
 	/* ── Queries ── */
 
-	/**
-	 * Get the active cart of a member.
-	 * Creates an empty cart if none exists.
-	 *
-	 * @example
-	 * query {
-	 *   getMyCart(memberId: "665f...") {
-	 *     _id cartTotal cartStatus
-	 *     cartItems { productId productName itemPrice itemQuantity }
-	 *   }
-	 * }
-	 */
+	@UseGuards(AuthGuard)
 	@Query(() => Cart)
-	public async getMyCart(@Args('memberId', { type: () => ID }) memberId: string): Promise<Cart> {
-		return this.cartService.getMyCart(memberId);
+	public async getMyCart(@AuthMember('_id') memberId: ObjectId): Promise<Cart> {
+		return this.cartService.getMyCart(memberId.toString());
 	}
 
 	/* ── Mutations ── */
 
-	/**
-	 * Add a product to the cart (or increment quantity if already present).
-	 *
-	 * @example
-	 * mutation {
-	 *   addToCart(
-	 *     memberId: "665f..."
-	 *     input: {
-	 *       productId: "..."
-	 *       productName: "Royal Canin Adult"
-	 *       itemPrice: 35
-	 *       itemQuantity: 2
-	 *     }
-	 *   ) { _id cartTotal cartItems { productName itemQuantity } }
-	 * }
-	 */
+	@UseGuards(AuthGuard)
 	@Mutation(() => Cart)
 	public async addToCart(
-		@Args('memberId', { type: () => ID }) memberId: string,
+		@AuthMember('_id') memberId: ObjectId,
 		@Args('input') input: CartItemInput,
 	): Promise<Cart> {
-		return this.cartService.addToCart(memberId, input);
+		return this.cartService.addToCart(memberId.toString(), input);
 	}
 
-	/**
-	 * Update the quantity of an item already in the cart.
-	 * Send itemQuantity: 0 to remove the item.
-	 *
-	 * @example
-	 * mutation {
-	 *   updateCartItem(input: { cartId: "...", productId: "...", itemQuantity: 3 }) {
-	 *     _id cartTotal cartItems { productId itemQuantity }
-	 *   }
-	 * }
-	 */
+	@UseGuards(AuthGuard)
 	@Mutation(() => Cart)
-	public async updateCartItem(@Args('input') input: UpdateCartItemInput): Promise<Cart> {
-		return this.cartService.updateCartItem(input);
+	public async updateCartItem(
+		@AuthMember('_id') memberId: ObjectId,
+		@Args('input') input: UpdateCartItemInput,
+	): Promise<Cart> {
+		return this.cartService.updateCartItem(memberId.toString(), input);
 	}
 
-	/**
-	 * Remove a single product from the cart.
-	 *
-	 * @example
-	 * mutation {
-	 *   removeCartItem(input: { cartId: "...", productId: "..." }) {
-	 *     _id cartTotal cartItems { productName }
-	 *   }
-	 * }
-	 */
+	@UseGuards(AuthGuard)
 	@Mutation(() => Cart)
-	public async removeCartItem(@Args('input') input: RemoveCartItemInput): Promise<Cart> {
-		return this.cartService.removeCartItem(input);
+	public async removeCartItem(
+		@AuthMember('_id') memberId: ObjectId,
+		@Args('input') input: RemoveCartItemInput,
+	): Promise<Cart> {
+		return this.cartService.removeCartItem(memberId.toString(), input);
 	}
 
-	/**
-	 * Remove all items from the cart.
-	 *
-	 * @example
-	 * mutation {
-	 *   clearCart(cartId: "...") { _id cartTotal cartItems { _id } }
-	 * }
-	 */
+	@UseGuards(AuthGuard)
 	@Mutation(() => Cart)
-	public async clearCart(@Args('cartId', { type: () => ID }) cartId: string): Promise<Cart> {
-		return this.cartService.clearCart(cartId);
+	public async clearCart(
+		@AuthMember('_id') memberId: ObjectId,
+		@Args('cartId', { type: () => ID }) cartId: string,
+	): Promise<Cart> {
+		return this.cartService.clearCart(memberId.toString(), cartId);
 	}
 }

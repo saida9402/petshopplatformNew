@@ -1,9 +1,8 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver } from '@nestjs/apollo';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppResolver } from './app.resolver';
 
 import { DatabaseModule } from './database/database.module';
@@ -11,15 +10,18 @@ import { ComponentsModule } from './components/components.module';
 import { T } from './libs/types/common';
 import { SocketModule } from './socket/socket.module';
 
+const gqlLogger = new Logger('GraphQL');
+
 @Module({
 	imports: [
 		ConfigModule.forRoot({
 			envFilePath: '.env',
 			isGlobal: true,
 		}),
+		ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
 		GraphQLModule.forRoot({
 			driver: ApolloDriver,
-			playground: true,
+			playground: process.env.NODE_ENV !== 'production',
 			uploads: false,
 			autoSchemaFile: true,
 
@@ -29,7 +31,7 @@ import { SocketModule } from './socket/socket.module';
 					message:
 						error?.extensions?.exception?.response?.message || error?.extensions?.response?.message || error?.message,
 				};
-				console.log('GRAPHQL GLOBAL ERR:', graphQLFormattedError);
+				gqlLogger.error(`GraphQL error: ${graphQLFormattedError.message}`, graphQLFormattedError.code);
 				return graphQLFormattedError;
 			},
 		}),
@@ -38,7 +40,6 @@ import { SocketModule } from './socket/socket.module';
 		SocketModule,
 	],
 
-	controllers: [AppController], //HTTP -> REST API (KODNI TEKSHIRIB HATOLIKNI XABAR QILISHI UCHUN FOR MYSELF)
-	providers: [AppService, AppResolver],
+	providers: [AppResolver],
 })
 export class AppModule {}

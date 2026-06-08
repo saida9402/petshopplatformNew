@@ -3,7 +3,7 @@ import { FollowService } from './follow.service';
 import { Follower, Followers, Followings } from '../../libs/dto/follow/follow';
 import { isValidObjectId, ObjectId } from 'mongoose';
 import { AuthMember } from '../auth/decorators/authMember.decorator';
-import { BadRequestException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Logger, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { shapeIntoMongoObjectId } from '../../libs/config';
 import { WithoutGuard } from '../auth/guards/without.guard';
@@ -12,6 +12,8 @@ import { Message } from '../../libs/enums/common.enum';
 
 @Resolver()
 export class FollowResolver {
+	private readonly logger = new Logger(FollowResolver.name);
+
 	constructor(private readonly followService: FollowService) {}
 	@UseGuards(AuthGuard)
 	@Mutation((returns) => Follower)
@@ -19,7 +21,7 @@ export class FollowResolver {
 		@Args('input') input: string,
 		@AuthMember('_id') memberId: ObjectId, //
 	): Promise<Follower> {
-		console.log('Mutation: subscribe');
+		this.logger.log('Mutation: subscribe');
 		const followingId = shapeIntoMongoObjectId(input);
 		return await this.followService.subscribe(memberId, followingId);
 	}
@@ -30,7 +32,7 @@ export class FollowResolver {
 		@Args('input') input: string,
 		@AuthMember('_id') memberId: ObjectId, //
 	): Promise<Follower> {
-		console.log('Mutation: unsubscribe');
+		this.logger.log('Mutation: unsubscribe');
 		const followingId = shapeIntoMongoObjectId(input);
 		return await this.followService.unsubscribe(memberId, followingId);
 	}
@@ -41,7 +43,7 @@ export class FollowResolver {
 		@Args('input') input: FollowInquiry,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Followings> {
-		console.log('Query: getMemberFollowings');
+		this.logger.log('Query: getMemberFollowings');
 		const { followerId } = input.search;
 		if (!followerId || !isValidObjectId(String(followerId))) {
 			throw new BadRequestException(Message.BAD_REQUEST);
@@ -56,7 +58,7 @@ export class FollowResolver {
 		@Args('input') input: FollowInquiry,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Followers> {
-		console.log('Query: getMemberFollowers');
+		this.logger.log('Query: getMemberFollowers');
 		const { followingId } = input.search;
 		if (!followingId || !isValidObjectId(String(followingId))) {
 			throw new BadRequestException(Message.BAD_REQUEST);

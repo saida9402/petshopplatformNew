@@ -1,6 +1,6 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { ViewService } from './view.service';
-import { UseGuards } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { AuthMember } from '../auth/decorators/authMember.decorator';
 import { ObjectId } from 'mongoose';
@@ -9,6 +9,8 @@ import { Products } from '../../libs/dto/product/product';
 
 @Resolver()
 export class ViewResolver {
+	private readonly logger = new Logger(ViewResolver.name);
+
 	constructor(private readonly viewService: ViewService) {}
 
 	@UseGuards(AuthGuard)
@@ -17,7 +19,7 @@ export class ViewResolver {
 		@Args('input') input: OrdinaryInquiry,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Products> {
-		console.log('Query: getVisited');
+		this.logger.log('Query: getVisited');
 		return await this.viewService.getVisitedProducts(memberId, input);
 	}
 }

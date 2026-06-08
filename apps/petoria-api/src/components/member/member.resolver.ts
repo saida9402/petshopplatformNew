@@ -1,7 +1,7 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { MemberService } from './member.service';
 import { SellersInquiry, LoginInput, MemberInput, MembersInquiry } from '../../libs/dto/member/member.input';
-import { InternalServerErrorException, UseGuards } from '@nestjs/common';
+import { BadRequestException, InternalServerErrorException, Logger, UseGuards } from '@nestjs/common';
 import { Member, Members } from '../../libs/dto/member/member';
 import { AuthGuard } from '../auth/guards/auth.guard';
 
@@ -18,21 +18,26 @@ import { createWriteStream } from 'fs';
 import * as path from 'path';
 import { GraphQLUpload, FileUpload } from 'graphql-upload';
 import { MemberUpdate, SellerUpdate } from '../../libs/dto/member/member.update';
+import { Throttle } from '@nestjs/throttler';
+import { UPLOAD_TARGETS } from '../../main';
 
 @Resolver()
 export class MemberResolver {
+	private readonly logger = new Logger(MemberResolver.name);
+
 	constructor(private readonly memberService: MemberService) {}
 
+	@Throttle({ default: { limit: 5, ttl: 60000 } })
 	@Mutation(() => Member)
 	public async signup(@Args('input') input: MemberInput): Promise<Member> {
-		console.log('Mutation: signup');
-
+		this.logger.log('Mutation: signup');
 		return await this.memberService.signup(input);
 	}
 
+	@Throttle({ default: { limit: 5, ttl: 60000 } })
 	@Mutation(() => Member)
 	public async login(@Args('input') input: LoginInput): Promise<Member | null> {
-		console.log('Mutation: login');
+		this.logger.log('Mutation: login');
 		return await this.memberService.login(input);
 	}
 
@@ -42,7 +47,7 @@ export class MemberResolver {
 		@Args('input') input: MemberUpdate,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Member> {
-		console.log('Mutation: updateMember');
+		this.logger.log('Mutation: updateMember');
 		delete input._id;
 		return await this.memberService.updateMember(memberId, input);
 	}
@@ -50,21 +55,15 @@ export class MemberResolver {
 	@UseGuards(WithoutGuard)
 	@Query(() => Member)
 	public async getMember(@Args('memberId') input: string, @AuthMember('_id') memberId: ObjectId): Promise<Member> {
-		console.log('Query: getMember');
-		console.log('AUTH MEMBER:', memberId);
-		console.log('=== RESOLVER ===');
-
+		this.logger.log('Query: getMember');
 		const targetId = shapeIntoMongoObjectId(input);
 		return this.memberService.getMember(memberId, targetId);
-		console.log('targetId:', targetId);
 	}
 
 	@UseGuards(AuthGuard)
 	@Query(() => String)
 	public async checkAuth(@AuthMember('memberNick') memberNick: string): Promise<string> {
-		console.log('Query: checkAuth');
-		console.log('memberNick:', memberNick);
-
+		this.logger.log(`Query: checkAuth [${memberNick}]`);
 		return `Hi ${memberNick}`;
 	}
 
@@ -74,7 +73,7 @@ export class MemberResolver {
 		@Args('input') input: SellersInquiry,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Members> {
-		console.log('Query: getSellers');
+		this.logger.log('Query: getSellers');
 		return await this.memberService.getSellers(memberId, input);
 	}
 
@@ -84,7 +83,7 @@ export class MemberResolver {
 		@Args('sellerId') sellerId: string,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Member> {
-		console.log('Query: getSellerById');
+		this.logger.log('Query: getSellerById');
 		const targetId = shapeIntoMongoObjectId(sellerId);
 		return this.memberService.getSellerById(memberId, targetId);
 	}
@@ -96,7 +95,7 @@ export class MemberResolver {
 		@Args('input') input: SellerUpdate,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Member> {
-		console.log('Mutation: updateSellerProfile');
+		this.logger.log('Mutation: updateSellerProfile');
 		delete input._id;
 		return this.memberService.updateSellerProfile(memberId, input);
 	}
@@ -107,14 +106,13 @@ export class MemberResolver {
 		@Args('memberId') input: string,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Member> {
-		console.log('Mutation: likeTargetMember');
+		this.logger.log('Mutation: likeTargetMember');
 		const likeRefId = shapeIntoMongoObjectId(input);
 		return await this.memberService.likeTargetMember(memberId, likeRefId);
 	}
 
 	/** ADMIN **/
 
-	// Authorization: ADMIN
 	@Roles(MemberType.ADMIN)
 	@UseGuards(RolesGuard)
 	@Query(() => Members)
@@ -126,42 +124,36 @@ export class MemberResolver {
 	@UseGuards(RolesGuard)
 	@Query(() => String)
 	public async checkAuthRoles(@AuthMember() authMember: Member): Promise<string> {
-		console.log('Query: checkAuthRoles');
-
+		this.logger.log('Query: checkAuthRoles');
 		return `Hi ${authMember.memberNick}, you are ${authMember.memberType} (memberId: ${authMember._id})`;
 	}
 
-	// Authorization: ADMIN
 	@Roles(MemberType.ADMIN)
 	@UseGuards(RolesGuard)
 	@Mutation(() => Member)
 	public async updateMemberByAdmin(@Args('input') input: MemberUpdate): Promise<Member> {
-		console.log('Mutation: updateMemberByAdmin');
+		this.logger.log('Mutation: updateMemberByAdmin');
 		return await this.memberService.updateMemberByAdmin(input);
 	}
 
-	/**Uploader */
-
-	// IMAGE UPLOADER (member.resolver.ts)
+	/** Uploader **/
 
 	@UseGuards(AuthGuard)
 	@Mutation((returns) => String)
 	public async imageUploader(
 		@Args({ name: 'file', type: () => GraphQLUpload })
 		{ createReadStream, filename, mimetype }: FileUpload,
-		@Args('target') target: String,
+		@Args('target') target: string,
 	): Promise<string> {
-		console.log('FILE_RECEIVED', { filename, mimetype });
-		console.log('UPLOAD_TARGET', target);
+		if (!UPLOAD_TARGETS.includes(target)) {
+			throw new BadRequestException('Invalid upload target');
+		}
 
 		if (!filename) {
-			console.error('UPLOAD_FAILURE', 'missing filename');
-			throw new Error(Message.UPLOAD_FAILED);
+			throw new BadRequestException(Message.UPLOAD_FAILED);
 		}
-		const validMime = validMimeTypes.includes(mimetype);
-		if (!validMime) {
-			console.error('UPLOAD_FAILURE', 'invalid mime', mimetype);
-			throw new Error(Message.PROVIDE_ALLOWED_FORMAT);
+		if (!validMimeTypes.includes(mimetype)) {
+			throw new BadRequestException(Message.PROVIDE_ALLOWED_FORMAT);
 		}
 
 		const imageName = getSerialForImage(filename);
@@ -169,23 +161,21 @@ export class MemberResolver {
 		const absolutePath = path.join(process.cwd(), relativePath);
 		const stream = createReadStream();
 
-		console.log('UPLOAD_PATH', { relativePath, absolutePath });
-
 		const result = await new Promise((resolve, reject) => {
 			stream
 				.pipe(createWriteStream(absolutePath))
 				.on('finish', () => resolve(true))
 				.on('error', (err) => {
-					console.error('UPLOAD_FAILURE', 'write error', err);
+					this.logger.error('imageUploader write error', err);
 					reject(false);
 				});
 		});
+
 		if (!result) {
-			console.error('UPLOAD_FAILURE', 'no result');
-			throw new Error(Message.UPLOAD_FAILED);
+			throw new BadRequestException(Message.UPLOAD_FAILED);
 		}
 
-		console.log('UPLOAD_SUCCESS', relativePath);
+		this.logger.log(`imageUploader success: ${relativePath}`);
 		return relativePath;
 	}
 
@@ -194,17 +184,20 @@ export class MemberResolver {
 	public async imagesUploader(
 		@Args('files', { type: () => [GraphQLUpload] })
 		files: Promise<FileUpload>[],
-		@Args('target') target: String,
+		@Args('target') target: string,
 	): Promise<string[]> {
-		console.log('Mutation: imagesUploader');
+		if (!UPLOAD_TARGETS.includes(target)) {
+			throw new BadRequestException('Invalid upload target');
+		}
+
+		this.logger.log('Mutation: imagesUploader');
 
 		const uploadedImages = [];
 		const promisedList = files.map(async (img: Promise<FileUpload>, index: number): Promise<Promise<void>> => {
 			try {
 				const { filename, mimetype, createReadStream } = await img;
 
-				const validMime = validMimeTypes.includes(mimetype);
-				if (!validMime) throw new Error(Message.PROVIDE_ALLOWED_FORMAT);
+				if (!validMimeTypes.includes(mimetype)) throw new BadRequestException(Message.PROVIDE_ALLOWED_FORMAT);
 
 				const imageName = getSerialForImage(filename);
 				const relativePath = `uploads/${target}/${imageName}`;
@@ -216,15 +209,15 @@ export class MemberResolver {
 						.pipe(createWriteStream(absolutePath))
 						.on('finish', () => resolve(true))
 						.on('error', (err) => {
-							console.error('[imagesUploader] Write error:', err);
+							this.logger.error('[imagesUploader] write error', err);
 							reject(false);
 						});
 				});
-				if (!result) throw new Error(Message.UPLOAD_FAILED);
+				if (!result) throw new BadRequestException(Message.UPLOAD_FAILED);
 
 				uploadedImages[index] = relativePath;
 			} catch (err) {
-				console.log('Error, file missing!');
+				this.logger.error('imagesUploader: file processing failed', err?.message);
 			}
 		});
 

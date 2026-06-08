@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
 import {
@@ -22,6 +22,8 @@ import { Member } from '../../libs/dto/member/member';
 
 @Injectable()
 export class ProductService {
+	private readonly logger = new Logger(ProductService.name);
+
 	constructor(
 		@InjectModel('Product')
 		private readonly productModel: Model<Product>,
@@ -39,45 +41,18 @@ export class ProductService {
 		try {
 			result = await this.productModel.create(input);
 		} catch (err) {
-			console.log('Error ProductService.createProduct:', err.message);
+			this.logger.error('createProduct failed', err.message);
 			throw new BadRequestException(Message.CREATE_FAILED);
 		}
 
 		try {
 			await this.memberModel.findByIdAndUpdate(memberId, { $inc: { memberProducts: 1 } }).exec();
 		} catch (err) {
-			console.log('Error ProductService.createProduct [memberProducts increment]:', err.message);
+			this.logger.error('createProduct [memberProducts increment] failed', err.message);
 		}
 
 		return result;
 	}
-
-	// ─── Bitta mahsulotni olish (view++ bilan) ───────────────────────────────────
-	// public async getProduct(memberId: ObjectId, productId: ObjectId): Promise<Product> {
-	// 	const search: any = {
-	// 		_id: productId,
-	// 		productStatus: ProductStatus.ACTIVE,
-	// 	};
-
-	// 	const targetProduct = await this.productModel.findOne(search).lean().exec();
-	// 	if (!targetProduct) throw new NotFoundException(Message.NO_DATA_FOUND);
-
-	// 	// Ko'rishlar sonini oshirish
-	// 	await this.productStatsEditor({ _id: productId, targetKey: 'productViews', modifier: 1 });
-
-	// 	// aggregation: memberData + meLiked
-	// 	const result = await this.productModel
-	// 		.aggregate([
-	// 			{ $match: search },
-	// 			lookupMember,
-	// 			{ $unwind: '$memberData' },
-	// 			...(memberId ? [lookupAuthMemberLiked(memberId)] : []),
-	// 		])
-	// 		.exec();
-
-	// 	if (!result.length) throw new NotFoundException(Message.NO_DATA_FOUND);
-	// 	return result[0];
-	// }
 
 	public async getProduct(memberId: ObjectId, productId: ObjectId): Promise<Product> {
 		const search: any = {
@@ -212,15 +187,6 @@ export class ProductService {
 
 		if (!result) throw new BadRequestException(Message.UPDATE_FAILED);
 
-		// Decrement seller's counter only when transitioning into DELETE
-		// if (productStatus === ProductStatus.DELETE && existing.productStatus !== ProductStatus.DELETE) {
-		// 	try {
-		// 		await this.memberModel.findByIdAndUpdate(memberId, { $inc: { memberProducts: -1 } }).exec();
-		// 	} catch (err) {
-		// 		console.log('Error ProductService.updateProduct [memberProducts decrement]:', err.message);
-		// 	}
-		// } keremas
-
 		return result;
 	}
 
@@ -270,7 +236,7 @@ export class ProductService {
 			try {
 				await this.memberModel.findByIdAndUpdate(existing.memberId, { $inc: { memberProducts: -1 } }).exec();
 			} catch (err) {
-				console.log('Error ProductService.updateProductByAdmin [memberProducts decrement]:', err.message);
+				this.logger.error('updateProductByAdmin [memberProducts decrement] failed', err.message);
 			}
 		}
 

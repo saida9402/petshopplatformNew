@@ -33,4 +33,6 @@ const CommentSchema = new Schema(
 	{ timestamps: true, collection: 'comments' },
 );
 
+CommentSchema.index({ memberId: 1, commentGroup: 1 });
+
 export default CommentSchema;

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
 import { MemberService } from '../member/member.service';
@@ -16,6 +16,8 @@ import { OrderStatus } from '../../libs/enums/order.enum';
 
 @Injectable()
 export class CommentService {
+	private readonly logger = new Logger(CommentService.name);
+
 	constructor(
 		@InjectModel('Comment') private readonly commentModel: Model<Comment>,
 		@InjectModel('Order') private readonly orderModel: Model<any>,
@@ -44,7 +46,7 @@ export class CommentService {
 		try {
 			result = await this.commentModel.create(input);
 		} catch (err) {
-			console.log('Error, Service.model:', err.message);
+			this.logger.error('createComment failed', err.message);
 			throw new BadRequestException(Message.CREATE_FAILED);
 		}
 

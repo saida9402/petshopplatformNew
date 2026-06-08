@@ -13,13 +13,15 @@ import { AuthMember } from '../auth/decorators/authMember.decorator';
 import { MemberType } from '../../libs/enums/member.enum';
 import { ObjectId } from 'mongoose';
 import { shapeIntoMongoObjectId } from '../../libs/config';
-import { UseGuards } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { WithoutGuard } from '../auth/guards/without.guard';
 
 @Resolver(() => Product)
 export class ProductResolver {
+	private readonly logger = new Logger(ProductResolver.name);
+
 	constructor(private readonly productService: ProductService) {}
 
 	// ─── Seller ───────────────────────────────────────────────────────────────────
@@ -81,7 +83,7 @@ export class ProductResolver {
 		@Args('input') input: string,
 		@AuthMember('_id') memberId: ObjectId,
 	): Promise<Product> {
-		console.log('Mutation: likeTargetProduct');
+		this.logger.log('Mutation: likeTargetProduct');
 		const likeRefId = shapeIntoMongoObjectId(input);
 		return await this.productService.likeTargetProduct(memberId, likeRefId);
 	}

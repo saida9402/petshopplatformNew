@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
 import { MemberService } from '../member/member.service';
@@ -15,6 +15,8 @@ import { T } from '../../libs/types/common';
 
 @Injectable()
 export class FollowService {
+	private readonly logger = new Logger(FollowService.name);
+
 	constructor(
 		@InjectModel('Follow') private readonly followModel: Model<Follower | Following>,
 		private readonly memberService: MemberService,
@@ -43,7 +45,7 @@ export class FollowService {
 				followerId: followerId,
 			});
 		} catch (err) {
-			console.log('Error, Service.model:', err.message);
+			this.logger.error('registerSubscription failed', err.message);
 			throw new BadRequestException(Message.CREATE_FAILED);
 		}
 	}
@@ -71,7 +73,7 @@ export class FollowService {
 		if (!search?.followerId) throw new InternalServerErrorException(Message.BAD_REQUEST); //backend validation shetda ishga tushirilgan
 
 		const match: T = { followerId: search?.followerId };
-		console.log('match:', match);
+		this.logger.debug('getMember followings/followers match built');
 
 		const result = await this.followModel
 			.aggregate([
@@ -106,7 +108,7 @@ export class FollowService {
 		if (!search?.followingId) throw new InternalServerErrorException(Message.BAD_REQUEST);
 
 		const match: T = { followingId: search?.followingId };
-		console.log('match:', match);
+		this.logger.debug('getMember followings/followers match built');
 
 		const result = await this.followModel
 			.aggregate([
