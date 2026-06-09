@@ -40,10 +40,17 @@ export const availableBrands = [
 
 // ─── Image konfiguratsiyasi ───────────────────────────────────────────────────
 export const validMimeTypes = ['image/png', 'image/jpg', 'image/jpeg'];
-export const getSerialForImage = (filename: string) => {
-	const ext = path.parse(filename).ext;
+export const validExtensions = new Set(['.jpg', '.jpeg', '.png']);
+
+export const getSerialForImage = (filename: string): string | null => {
+	const ext = path.parse(filename).ext.toLowerCase();
+	if (!validExtensions.has(ext)) return null;
 	return uuidv4() + ext;
 };
+
+// ─── Regex sanitization ──────────────────────────────────────────────────────
+export const escapeRegex = (text: string): string =>
+	text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const shapeIntoMongoObjectId = (target: any) => {
 	return typeof target === 'string' ? new ObjectId(target) : target;

@@ -12,7 +12,7 @@ import { Product, Products } from '../../libs/dto/product/product';
 import { ProductStatus } from '../../libs/enums/product.enum';
 import { Message } from '../../libs/enums/common.enum';
 import { Direction } from '../../libs/enums/common.enum';
-import { lookupAuthMemberLiked, lookupMember, shapeIntoMongoObjectId } from '../../libs/config';
+import { escapeRegex, lookupAuthMemberLiked, lookupMember, shapeIntoMongoObjectId } from '../../libs/config';
 import { LikeService } from '../like/like.service';
 import { LikeGroup } from '../../libs/enums/like.enum';
 import { LikeInput } from '../../libs/dto/like/like.input';
@@ -109,10 +109,11 @@ export class ProductService {
 			};
 		}
 		if (search.text) {
+			const safeText = escapeRegex(search.text);
 			match.$or = [
-				{ productName: { $regex: search.text, $options: 'i' } },
-				{ productBrand: { $regex: search.text, $options: 'i' } },
-				{ productDesc: { $regex: search.text, $options: 'i' } },
+				{ productName: { $regex: safeText, $options: 'i' } },
+				{ productBrand: { $regex: safeText, $options: 'i' } },
+				{ productDesc: { $regex: safeText, $options: 'i' } },
 			];
 		}
 

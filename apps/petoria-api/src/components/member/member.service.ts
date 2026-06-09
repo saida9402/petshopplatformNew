@@ -14,7 +14,7 @@ import { LikeGroup } from '../../libs/enums/like.enum';
 import { LikeInput } from '../../libs/dto/like/like.input';
 import { LikeService } from '../like/like.service';
 import { Follower, Following, MeFollowed } from '../../libs/dto/follow/follow';
-import { lookupAuthMemberLiked } from '../../libs/config';
+import { escapeRegex, lookupAuthMemberLiked } from '../../libs/config';
 import { MemberUpdate, SellerUpdate } from '../../libs/dto/member/member.update';
 
 @Injectable()
@@ -31,6 +31,7 @@ export class MemberService {
 	) {}
 
 	public async signup(input: MemberInput): Promise<Member> {
+		input.memberType = MemberType.USER; // security: always force USER — never trust client-supplied role
 		input.memberPassword = await this.authService.hashPassword(input.memberPassword);
 		try {
 			const result = await this.memberModel.create(input);
@@ -127,7 +128,7 @@ export class MemberService {
 		const match: T = { memberType: MemberType.SELLER, memberStatus: MemberStatus.ACTIVE };
 		const sort: T = { [input?.sort ?? 'createdAt']: input?.direction ?? Direction.DESC };
 
-		if (text) match.memberNick = { $regex: new RegExp(text, 'i') };
+		if (text) match.memberNick = { $regex: escapeRegex(text), $options: 'i' };
 		const result = await this.memberModel
 			.aggregate([
 				{ $match: match },
@@ -176,7 +177,7 @@ export class MemberService {
 
 		if (memberStatus) match.memberStatus = memberStatus;
 		if (memberType) match.memberType = memberType;
-		if (text) match.memberNick = { $regex: new RegExp(text, 'i') };
+		if (text) match.memberNick = { $regex: escapeRegex(text), $options: 'i' };
 
 		const result = await this.memberModel
 			.aggregate([

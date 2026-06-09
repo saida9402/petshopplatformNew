@@ -157,6 +157,9 @@ export class MemberResolver {
 		}
 
 		const imageName = getSerialForImage(filename);
+		if (!imageName) {
+			throw new BadRequestException(Message.PROVIDE_ALLOWED_FORMAT);
+		}
 		const relativePath = `uploads/${target}/${imageName}`;
 		const absolutePath = path.join(process.cwd(), relativePath);
 		const stream = createReadStream();
@@ -200,6 +203,7 @@ export class MemberResolver {
 				if (!validMimeTypes.includes(mimetype)) throw new BadRequestException(Message.PROVIDE_ALLOWED_FORMAT);
 
 				const imageName = getSerialForImage(filename);
+				if (!imageName) throw new BadRequestException(Message.PROVIDE_ALLOWED_FORMAT);
 				const relativePath = `uploads/${target}/${imageName}`;
 				const absolutePath = path.join(process.cwd(), relativePath);
 				const stream = createReadStream();
