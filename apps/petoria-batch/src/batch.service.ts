@@ -24,22 +24,39 @@ export class BatchService {
 	}
 
 	public async batchTopProducts(): Promise<void> {
-		const products: Product[] = await this.productModel
-			.find({
-				productStatus: ProductStatus.ACTIVE,
-				productRank: 0,
-			})
+		await this.productModel
+			.updateMany({ productStatus: ProductStatus.ACTIVE }, [
+				{
+					$set: {
+						productRank: {
+							$add: [{ $multiply: ['$productLikes', 2] }, { $multiply: ['$productViews', 1] }],
+						},
+					},
+				},
+			])
 			.exec();
+	}
 
-		const promisedList = products.map(async (ele: Product) => {
-			const { _id, productLikes, productViews } = ele;
-			const rank = productLikes * 2 + productViews * 1;
-			return await this.productModel.findByIdAndUpdate(_id, { productRank: rank });
-		});
-		await Promise.all(promisedList);
+	public async batchTopSellers(): Promise<void> {
+		await this.memberModel
+			.updateMany({ memberStatus: MemberStatus.ACTIVE, memberType: MemberType.SELLER }, [
+				{
+					$set: {
+						memberRank: {
+							$add: [
+								{ $multiply: ['$memberProducts', 5] },
+								{ $multiply: ['$memberArticles', 3] },
+								{ $multiply: ['$memberLikes', 2] },
+								{ $multiply: ['$memberViews', 1] },
+							],
+						},
+					},
+				},
+			])
+			.exec();
 	}
 
 	public getHello(): string {
-		return 'Welcome to Nestar BATCH Server!';
+		return 'Welcome to Petoria BATCH Server!';
 	}
 }
