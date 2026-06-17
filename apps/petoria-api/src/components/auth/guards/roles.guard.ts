@@ -1,6 +1,18 @@
-import { BadRequestException, CanActivate, ExecutionContext, ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import {
+	BadRequestException,
+	CanActivate,
+	ExecutionContext,
+	ForbiddenException,
+	Injectable,
+	Logger,
+	UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { AuthService } from '../auth.service';
+import { Member } from 'apps/petoria-api/src/libs/dto/member/member';
+import { MemberStatus } from 'apps/petoria-api/src/libs/enums/member.enum';
 import { Message } from 'apps/petoria-api/src/libs/enums/common.enum';
 
 @Injectable()
@@ -10,6 +22,7 @@ export class RolesGuard implements CanActivate {
 	constructor(
 		private reflector: Reflector,
 		private authService: AuthService,
+		@InjectModel('Member') private readonly memberModel: Model<Member>,
 	) {}
 
 	async canActivate(context: ExecutionContext | any): Promise<boolean> {
@@ -21,18 +34,30 @@ export class RolesGuard implements CanActivate {
 			const bearerToken = request.headers.authorization;
 			if (!bearerToken) throw new BadRequestException(Message.TOKEN_NOT_EXIST);
 
-			const token = bearerToken.split(' ')[1],
-				authMember = await this.authService.verifyToken(token),
-				hasRole = () => roles.indexOf(authMember.memberType) > -1,
-				hasPermission: boolean = hasRole();
+			const token = bearerToken.split(' ')[1];
+			const authMember = await this.authService.verifyToken(token);
+			if (!authMember) throw new ForbiddenException(Message.ONLY_SPECIFIC_ROLES_ALLOWED);
 
-			if (!authMember || !hasPermission) throw new ForbiddenException(Message.ONLY_SPECIFIC_ROLES_ALLOWED);
+			// Re-read role and status from DB — never trust the JWT role for
+			// access-control decisions. A demoted admin retains a valid token
+			// but must not pass role-restricted endpoints.
+			const currentMember = await this.memberModel
+				.findOne({ _id: authMember._id, memberStatus: MemberStatus.ACTIVE })
+				.select('_id memberType memberStatus memberNick')
+				.lean()
+				.exec();
 
-			this.logger.debug(`RolesGuard passed [${roles}]: ${authMember.memberNick}`);
-			request.body.authMember = authMember;
+			if (!currentMember) throw new UnauthorizedException(Message.NOT_AUTHENTICATED);
+
+			const hasPermission = roles.includes(currentMember.memberType);
+			if (!hasPermission) throw new ForbiddenException(Message.ONLY_SPECIFIC_ROLES_ALLOWED);
+
+			this.logger.debug(`RolesGuard passed [${roles}]: ${currentMember.memberNick}`);
+			// Fresh DB data overwrites stale JWT fields
+			request.body.authMember = { ...authMember, ...currentMember };
 			return true;
 		}
 
-		// description => http, rpc, gprs and etc are ignored
+		return false;
 	}
 }
