@@ -51,25 +51,34 @@ export class MemberService {
 			.select('+memberPassword')
 			.exec();
 
+		// Single generic error for all auth failures — prevents username enumeration.
+		// An attacker cannot distinguish "nick not found", "account blocked", or
+		// "wrong password" from the response.
+		const authError = new BadRequestException('Invalid credentials');
+
 		if (!response || response.memberStatus === MemberStatus.DELETE) {
-			throw new InternalServerErrorException(Message.NO_MEMBER_NICK);
-		} else if (response.memberStatus === MemberStatus.BLOCK) {
-			throw new InternalServerErrorException(Message.BLOCKED_USER);
+			// Still run a dummy bcrypt compare to prevent timing-based enumeration
+			await this.authService.comparePasswords(memberPassword, '$2b$10$dummyhashfortimingequalityXXXXXXXXXXXXXX');
+			throw authError;
+		}
+		if (response.memberStatus === MemberStatus.BLOCK) {
+			await this.authService.comparePasswords(memberPassword, '$2b$10$dummyhashfortimingequalityXXXXXXXXXXXXXX');
+			throw authError;
 		}
 
-		const isMatch = await this.authService.comparePasswords(input.memberPassword, response.memberPassword);
-		if (!isMatch) throw new InternalServerErrorException(Message.WRONG_PASSWORD);
-		response.accessToken = await this.authService.createToken(response);
+		const isMatch = await this.authService.comparePasswords(memberPassword, response.memberPassword);
+		if (!isMatch) throw authError;
 
+		response.accessToken = await this.authService.createToken(response);
 		return response;
 	}
 
 	public async updateMember(memberId: ObjectId, input: MemberUpdate): Promise<Member> {
-		// AUTHZ-001: strip privileged fields — only admins may change role or status
+		// Strip privileged fields — only admins may change role or status
 		delete (input as any).memberType;
 		delete (input as any).memberStatus;
 
-		// AUTHZ-002: hash password before persistence if it is being updated
+		// Hash password before persistence if it is being updated
 		if (input.memberPassword) {
 			input.memberPassword = await this.authService.hashPassword(input.memberPassword);
 		}
@@ -241,7 +250,7 @@ export class MemberService {
 	}
 
 	public async updateMemberByAdmin(input: MemberUpdate): Promise<Member> {
-		// AUTHZ-003: hash password before persistence if it is being updated
+		// Hash password before persistence if it is being updated
 		if (input.memberPassword) {
 			input.memberPassword = await this.authService.hashPassword(input.memberPassword);
 		}

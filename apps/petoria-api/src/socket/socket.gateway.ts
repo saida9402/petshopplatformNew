@@ -83,10 +83,26 @@ export class SocketGateway implements OnGatewayInit {
 	@SubscribeMessage('message')
 	public async handleMessage(client: WebSocket, payload: string): Promise<void> {
 		const authMember = this.clientsAuthMap.get(client);
-		const newMessage: MessagePayload = { event: 'message', text: payload, memberData: authMember };
 
-		const clientNick: string = authMember?.memberNick ?? 'Guest';
-		this.logger.verbose(`NEW MESSAGE [${clientNick}]: ${payload}`);
+		// Only authenticated members may send messages.
+		// Guests can still connect and receive but cannot broadcast.
+		if (!authMember) {
+			client.send(JSON.stringify({ event: 'error', message: 'Authentication required to send messages' }));
+			return;
+		}
+
+		// Validate payload type and length to prevent memory exhaustion.
+		if (typeof payload !== 'string' || payload.trim().length === 0 || payload.length > 500) {
+			client.send(JSON.stringify({ event: 'error', message: 'Message must be 1–500 characters' }));
+			return;
+		}
+
+		// HTML-encode angle brackets so clients that render as HTML cannot be
+		// targeted with stored XSS via crafted message content.
+		const safeText = payload.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+		const newMessage: MessagePayload = { event: 'message', text: safeText, memberData: authMember };
+		this.logger.verbose(`NEW MESSAGE [${authMember.memberNick}]: ${safeText}`);
 
 		this.messagesList.push(newMessage);
 		if (this.messagesList.length > 5) this.messagesList.splice(0, this.messagesList.length - 5);

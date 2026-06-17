@@ -5,31 +5,38 @@ import { tap } from 'rxjs/operators';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-	private readonly logger: Logger = new Logger();
+	private readonly logger: Logger = new Logger('API');
 
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
 		const recordTime = Date.now();
 		const requestType = context.getType<GqlContextType>();
 
-		if (requestType === 'http') {
-			/* Develop if needed! */
-		} else if (requestType === 'graphql') {
-			/* (1) Print Request */
+		if (requestType === 'graphql') {
 			const gqlContext = GqlExecutionContext.create(context);
-			this.logger.log(`${this.stringify(gqlContext.getContext().req.body)}`, 'REQUEST');
+			const body = gqlContext.getContext().req.body;
 
-			/* (2) Errors handing via GraphQL */
-			/* (3) No Errors, giving Response below */
+			// Log operation name and variable keys only — never log variable values
+			// or response bodies, which may contain access tokens or PII.
+			this.logger.log(
+				JSON.stringify({
+					op: body?.operationName,
+					vars: body?.variables ? Object.keys(body.variables) : [],
+				}),
+				'REQUEST',
+			);
+
 			return next.handle().pipe(
-				tap((context) => {
-					const responseTime = Date.now() - recordTime;
-					this.logger.log(`${this.stringify(context)} - ${responseTime}ms \n\n`, 'RESPONSE');
+				tap(() => {
+					this.logger.log(
+						`${context.getHandler().name} — ${Date.now() - recordTime}ms`,
+						'RESPONSE',
+					);
 				}),
 			);
 		}
-	}
 
-	private stringify(context: ExecutionContext): string {
-		return JSON.stringify(context).slice(0, 75);
+		// HTTP, WebSocket, RPC — must return the observable or NestJS receives
+		// undefined and the handler response is silently dropped.
+		return next.handle();
 	}
 }

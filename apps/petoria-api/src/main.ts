@@ -1,4 +1,4 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { LoggingInterceptor } from './libs/interceptor/Logging.interceptor';
@@ -7,6 +7,7 @@ import * as express from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 import { WsAdapter } from '@nestjs/platform-ws';
+import helmet from 'helmet';
 
 export const UPLOAD_TARGETS = ['member', 'product', 'article'];
 
@@ -14,9 +15,24 @@ const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
+
+	// Must be registered before any other middleware.
+	// crossOriginResourcePolicy: 'cross-origin' allows Nginx to serve /uploads
+	// from a different origin without browsers blocking the images.
+	app.use(
+		helmet({
+			crossOriginResourcePolicy: { policy: 'cross-origin' },
+		}),
+	);
+
 	app.useGlobalPipes(new ValidationPipe());
 	app.useGlobalInterceptors(new LoggingInterceptor());
 
+	// Fail-fast in production if CORS_ORIGINS is not configured
+	const isProd = process.env.NODE_ENV === 'production';
+	if (isProd && !process.env.CORS_ORIGINS) {
+		throw new Error('CORS_ORIGINS environment variable must be set in production');
+	}
 	const allowedOrigins = process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:4000'];
 	app.enableCors({ origin: allowedOrigins, credentials: true });
 
