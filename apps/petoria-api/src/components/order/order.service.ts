@@ -25,7 +25,7 @@ export class OrderService {
 			throw new BadRequestException('At least one order item is required');
 		}
 
-		// DI-002: fetch authoritative prices from DB — ignore client-supplied itemPrice entirely
+		// Fetch authoritative prices from DB — ignore client-supplied itemPrice entirely
 		const productObjectIds = input.orderItems.map((item) => new Types.ObjectId(item.productId));
 		const products = await this.productModel
 			.find({ _id: { $in: productObjectIds }, productStatus: ProductStatus.ACTIVE })
