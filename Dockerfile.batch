@@ -1,0 +1,46 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 1 — Builder
+# Shared builder: compiles the full monorepo so petoria-batch can resolve
+# cross-app imports (apps/petoria-api/src/schemas/*, libs/*, etc.).
+# ══════════════════════════════════════════════════════════════════════════════
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 2 — Production (petoria-batch)
+# Cron-only service: no uploads volume, no public port.
+# ══════════════════════════════════════════════════════════════════════════════
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY --from=builder /app/dist ./dist
+
+RUN chown -R appuser:appgroup /app
+
+USER appuser
+
+EXPOSE 3003
+
+# Health check: root GET / returns "Welcome to Petoria BATCH Server!" with 200.
+HEALTHCHECK --interval=60s --timeout=5s --start-period=20s --retries=3 \
+    CMD node -e " \
+        const http = require('http'); \
+        http.get('http://localhost:3003', (r) => process.exit(r.statusCode < 500 ? 0 : 1)) \
+            .on('error', () => process.exit(1)); \
+    "
+
+CMD ["node", "dist/apps/petoria-batch/main"]
