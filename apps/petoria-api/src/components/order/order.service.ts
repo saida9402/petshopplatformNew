@@ -68,14 +68,39 @@ export class OrderService {
 	   READ — orders belonging to a member
 	══════════════════════════════════════════ */
 	public async getMyOrders(memberId: string): Promise<Order[]> {
-		return this.orderModel.find({ memberId }).sort({ createdAt: -1 }).exec();
+		const orders = await this.orderModel.find({ memberId }).sort({ createdAt: -1 }).limit(50).lean().exec();
+
+		// Single lookup to resolve product names for all items across all orders.
+		const allProductIds = [...new Set(orders.flatMap((o) => o.orderItems.map((item) => item.productId.toString())))];
+		const nameMap = new Map<string, string>();
+
+		if (allProductIds.length > 0) {
+			const products = await this.productModel
+				.find({ _id: { $in: allProductIds } })
+				.select('_id productName')
+				.lean()
+				.exec();
+			for (const p of products) nameMap.set(p._id.toString(), p.productName as string);
+		}
+
+		const enriched = orders.map((order) => ({
+			...order,
+			orderItems: order.orderItems.map((item) => ({
+				...item,
+				itemName: nameMap.get(item.productId.toString()) ?? null,
+			})),
+		}));
+
+		return enriched as unknown as Order[];
 	}
 
 	/* ══════════════════════════════════════════
 	   READ — all orders (admin)
 	══════════════════════════════════════════ */
 	public async getAllOrders(): Promise<Order[]> {
-		return this.orderModel.find().sort({ createdAt: -1 }).exec();
+		// Capped at 200: sufficient for an admin dashboard. Add pagination
+		// via OrdersInquiry DTO when order volume warrants it.
+		return this.orderModel.find().sort({ createdAt: -1 }).limit(200).exec();
 	}
 
 	/* ══════════════════════════════════════════

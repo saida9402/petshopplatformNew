@@ -31,6 +31,10 @@ export class OrderItem {
 		default: OrderItemStatus.PENDING,
 	})
 	itemStatus: OrderItemStatus;
+
+	/** Populated at query time from the Product collection — never persisted. */
+	@Field({ nullable: true })
+	itemName?: string;
 }
 
 export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
