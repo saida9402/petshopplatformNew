@@ -26,10 +26,13 @@ export class AuthGuard implements CanActivate {
 		if (context.contextType === 'graphql') {
 			const request = context.getArgByIndex(2).req;
 
-			const bearerToken = request.headers.authorization;
-			if (!bearerToken) throw new BadRequestException(Message.TOKEN_NOT_EXIST);
-
-			const token = bearerToken.split(' ')[1];
+			// HttpOnly cookie is the primary auth channel; Authorization header is a fallback.
+			let token: string | undefined = request.cookies?.accessToken;
+			if (!token) {
+				const bearerToken = request.headers.authorization;
+				if (bearerToken) token = bearerToken.split(' ')[1];
+			}
+			if (!token) throw new BadRequestException(Message.TOKEN_NOT_EXIST);
 			const authMember = await this.authService.verifyToken(token);
 			if (!authMember) throw new UnauthorizedException(Message.NOT_AUTHENTICATED);
 

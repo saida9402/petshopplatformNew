@@ -4,6 +4,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { LoggingInterceptor } from './libs/interceptor/Logging.interceptor';
 import { graphqlUploadExpress } from 'graphql-upload';
 import * as express from 'express';
+import * as cookieParser from 'cookie-parser';
 import * as path from 'path';
 import * as fs from 'fs';
 import { WsAdapter } from '@nestjs/platform-ws';
@@ -25,6 +26,7 @@ async function bootstrap() {
 		}),
 	);
 
+	app.use(cookieParser());
 	app.useGlobalPipes(new ValidationPipe());
 	app.useGlobalInterceptors(new LoggingInterceptor());
 

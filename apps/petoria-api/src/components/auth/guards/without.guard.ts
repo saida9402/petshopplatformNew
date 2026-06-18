@@ -9,14 +9,18 @@ export class WithoutGuard implements CanActivate {
 
 	async canActivate(context: ExecutionContext | any): Promise<boolean> {
 		if (context.contextType === 'graphql') {
-			const request = context.getArgByIndex(2).req,
-				bearerToken = request.headers.authorization;
+			const request = context.getArgByIndex(2).req;
 
-			if (bearerToken) {
+			// Cookie first, then Authorization header (same order as AuthGuard)
+			let token: string | undefined = request.cookies?.accessToken;
+			if (!token) {
+				const bearerToken = request.headers.authorization;
+				if (bearerToken) token = bearerToken.split(' ')[1];
+			}
+
+			if (token) {
 				try {
-					const token = bearerToken.split(' ')[1],
-						authMember = await this.authService.verifyToken(token);
-					request.body.authMember = authMember;
+					request.body.authMember = await this.authService.verifyToken(token);
 				} catch (err) {
 					request.body.authMember = null;
 				}

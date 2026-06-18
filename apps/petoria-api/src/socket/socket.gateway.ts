@@ -4,7 +4,6 @@ import { Server } from 'ws';
 import { WebSocket } from 'ws';
 import { AuthService } from '../components/auth/auth.service';
 import { Member } from '../libs/dto/member/member';
-import * as url from 'url';
 
 interface MessagePayload {
 	event: string;
@@ -35,11 +34,20 @@ export class SocketGateway implements OnGatewayInit {
 		this.logger.verbose(`WebSocket Server Initialized & total [${this.summaryClient}]`);
 	}
 
+	private parseCookieToken(cookieHeader: string): string | null {
+		const match = cookieHeader
+			.split(';')
+			.map((c) => c.trim())
+			.find((c) => c.startsWith('accessToken='));
+		if (!match) return null;
+		return decodeURIComponent(match.split('=').slice(1).join('='));
+	}
+
 	private async retrieveAuth(req: any): Promise<Member> {
 		try {
-			const parseUrl = url.parse(req.url, true);
-			const { token } = parseUrl.query;
-			return await this.authService.verifyToken(token as string);
+			const token = this.parseCookieToken(req.headers.cookie ?? '');
+			if (!token) return null;
+			return await this.authService.verifyToken(token);
 		} catch (err) {
 			return null;
 		}
