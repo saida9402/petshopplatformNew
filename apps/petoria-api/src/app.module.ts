@@ -29,6 +29,7 @@ const gqlLogger = new Logger('GraphQL');
 			playground: process.env.NODE_ENV !== 'production',
 			uploads: false,
 			autoSchemaFile: true,
+			csrfPrevention: true,
 
 			// Required for GqlThrottlerGuard (and AuthGuard / RolesGuard) to read
 			// req and res from the GraphQL execution context.

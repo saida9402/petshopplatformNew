@@ -39,7 +39,12 @@ export class RolesGuard implements CanActivate {
 				if (bearerToken) token = bearerToken.split(' ')[1];
 			}
 			if (!token) throw new BadRequestException(Message.TOKEN_NOT_EXIST);
-			const authMember = await this.authService.verifyToken(token);
+			let authMember: Member | null = null;
+			try {
+				authMember = await this.authService.verifyToken(token);
+			} catch {
+				throw new UnauthorizedException(Message.NOT_AUTHENTICATED);
+			}
 			if (!authMember) throw new ForbiddenException(Message.ONLY_SPECIFIC_ROLES_ALLOWED);
 
 			// Re-read role and status from DB — never trust the JWT role for
