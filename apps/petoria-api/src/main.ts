@@ -15,6 +15,19 @@ export const UPLOAD_TARGETS = ['member', 'product', 'article'];
 const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
+	// Fail fast on missing required env vars before building the module graph.
+	// JwtModule accepts secret: undefined without throwing at init time — the
+	// error only surfaces on the first sign/verify call, making it hard to
+	// diagnose. Checking here gives a clear message at process start.
+	if (!process.env.SECRET_TOKEN) {
+		throw new Error('SECRET_TOKEN environment variable is required');
+	}
+	const dbUri = process.env.NODE_ENV === 'production' ? process.env.MONGO_PROD : process.env.MONGO_DEV;
+	if (!dbUri) {
+		const varName = process.env.NODE_ENV === 'production' ? 'MONGO_PROD' : 'MONGO_DEV';
+		throw new Error(`${varName} environment variable is required`);
+	}
+
 	const app = await NestFactory.create(AppModule);
 
 	// Must be registered before any other middleware.
