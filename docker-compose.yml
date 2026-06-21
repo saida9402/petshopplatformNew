@@ -2,7 +2,6 @@
 # Deploy: docker compose --env-file .env.production up -d --build
 
 services:
-
   # ── petoria-api ─────────────────────────────────────────────────────────────
   # Main GraphQL API. Reachable from the internet only through Nginx.
   # The host port binding (127.0.0.1) allows VPS-local debugging via SSH tunnel
@@ -16,19 +15,25 @@ services:
     env_file: .env.production
     environment:
       NODE_ENV: production
+    image: petoria-api:latest
     volumes:
       # Named volume: user uploads persist across container rebuilds and restarts.
       # Nginx mounts the same volume read-only to serve static files directly.
       - uploads_data:/app/uploads
     ports:
       # Bound to loopback — never reachable from the internet directly.
-      - "127.0.0.1:3002:3002"
+      - '127.0.0.1:3002:3002'
     networks:
       - petoria-net
-    restart: unless-stopped
+    restart: always
     healthcheck:
-      test: ["CMD", "node", "-e",
-        "const http=require('http');http.get('http://localhost:3002',(r)=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "const http=require('http');http.get('http://localhost:3002',(r)=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       start_period: 15s
@@ -36,8 +41,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "5"
+        max-size: '10m'
+        max-file: '5'
 
   # ── petoria-batch ───────────────────────────────────────────────────────────
   # Cron job server. Has no public-facing role — must never be reachable from
@@ -52,7 +57,8 @@ services:
     environment:
       NODE_ENV: production
     ports:
-      - "127.0.0.1:3003:3003"
+      - '127.0.0.1:3003:3003'
+    image: petoria-batch:latest
     networks:
       - petoria-net
     depends_on:
@@ -60,8 +66,13 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e",
-        "const http=require('http');http.get('http://localhost:3003',(r)=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "const http=require('http');http.get('http://localhost:3003',(r)=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))",
+        ]
       interval: 60s
       timeout: 5s
       start_period: 20s
@@ -69,8 +80,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "5m"
-        max-file: "3"
+        max-size: '5m'
+        max-file: '3'
 
   # ── nginx ───────────────────────────────────────────────────────────────────
   # Sole public-facing entry point. Handles TLS termination, WebSocket proxying,
@@ -79,8 +90,8 @@ services:
     image: nginx:1.27-alpine
     container_name: petoria-nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       # Nginx config — read-only; edit nginx/nginx.conf and restart nginx to apply
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -97,15 +108,15 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "5"
+        max-size: '10m'
+        max-file: '5'
 
 # ── Internal network ───────────────────────────────────────────────────────────
 # Services communicate by container name (e.g. http://petoria-api:3002).
 # Nothing on this network is reachable from outside unless explicitly published.
 networks:
   petoria-net:
-    driver: bridge
+    external: true
 
 # ── Persistent storage ─────────────────────────────────────────────────────────
 # uploads_data survives container stops, restarts, and image rebuilds.
