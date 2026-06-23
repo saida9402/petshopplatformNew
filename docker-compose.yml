@@ -1,126 +1,33 @@
-# Docker Compose v2 — no deprecated "version" key
-# Deploy: docker compose --env-file .env.production up -d --build
+version: "3.3"
 
 services:
-  # ── petoria-api ─────────────────────────────────────────────────────────────
-  # Main GraphQL API. Reachable from the internet only through Nginx.
-  # The host port binding (127.0.0.1) allows VPS-local debugging via SSH tunnel
-  # but is blocked at the VPS firewall for all external traffic.
   petoria-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: production
     container_name: petoria-api
-    env_file: .env.production
-    environment:
-      NODE_ENV: production
-    image: petoria-api:latest
-    volumes:
-      # Named volume: user uploads persist across container rebuilds and restarts.
-      # Nginx mounts the same volume read-only to serve static files directly.
-      - uploads_data:/app/uploads
-    ports:
-      # Bound to loopback — never reachable from the internet directly.
-      - '127.0.0.1:3002:3002'
-    networks:
-      - petoria-net
     restart: always
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "const http=require('http');http.get('http://localhost:3002',(r)=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))",
-        ]
-      interval: 30s
-      timeout: 5s
-      start_period: 15s
-      retries: 3
-    logging:
-      driver: json-file
-      options:
-        max-size: '10m'
-        max-file: '5'
-
-  # ── petoria-batch ───────────────────────────────────────────────────────────
-  # Cron job server. Has no public-facing role — must never be reachable from
-  # the internet. Host port binding kept for SSH-tunnel debugging only.
-  petoria-batch:
-    build:
-      context: .
-      dockerfile: Dockerfile.batch
-      target: production
-    container_name: petoria-batch
-    env_file: .env.production
-    environment:
-      NODE_ENV: production
+    image: node:20.19.0
     ports:
-      - '127.0.0.1:3003:3003'
-    image: petoria-batch:latest
-    networks:
-      - petoria-net
-    depends_on:
-      petoria-api:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "const http=require('http');http.get('http://localhost:3003',(r)=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))",
-        ]
-      interval: 60s
-      timeout: 5s
-      start_period: 20s
-      retries: 3
-    logging:
-      driver: json-file
-      options:
-        max-size: '5m'
-        max-file: '3'
-
-  # ── nginx ───────────────────────────────────────────────────────────────────
-  # Sole public-facing entry point. Handles TLS termination, WebSocket proxying,
-  # GraphQL proxying, and serves /uploads directly from the named volume.
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: petoria-nginx
-    ports:
-      - '80:80'
-      - '443:443'
+      - 3002:3002
     volumes:
-      # Nginx config — read-only; edit nginx/nginx.conf and restart nginx to apply
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # SSL certificates — provisioned on the VPS host via certbot, mounted here
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      # Uploaded files — same volume as petoria-api, read-only in Nginx
-      - uploads_data:/app/uploads:ro
+      - ./:/usr/src/petoria
+    working_dir: /usr/src/petoria
     networks:
-      - petoria-net
-    depends_on:
-      petoria-api:
-        condition: service_healthy
+      - monorepo-network
+    command: bash -c "npm install && npm run build && npm run start:prod"
+
+  petoria-batch:
+    container_name: petoria-batch
     restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: '10m'
-        max-file: '5'
+    image: node:20.10.0
+    ports:
+      - 4002:3008
+    volumes:
+      - ./:/usr/src/petoria
+      - ./uploads:/app/uploads
+    working_dir: /usr/src/petoria
+    networks:
+      - monorepo-network
+    command: bash -c "npm install && npm run build:batch && npm run start:prod:batch"
 
-# ── Internal network ───────────────────────────────────────────────────────────
-# Services communicate by container name (e.g. http://petoria-api:3002).
-# Nothing on this network is reachable from outside unless explicitly published.
 networks:
-  petoria-net:
-    external: true
-
-# ── Persistent storage ─────────────────────────────────────────────────────────
-# uploads_data survives container stops, restarts, and image rebuilds.
-# Back up the volume mount point regularly (see deployment guide).
-volumes:
-  uploads_data:
-    driver: local
+  monorepo-network:
+    driver: bridge
