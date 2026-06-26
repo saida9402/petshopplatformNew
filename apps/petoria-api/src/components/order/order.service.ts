@@ -21,12 +21,27 @@ export class OrderService {
 	   CREATE — place a new order
 	══════════════════════════════════════════ */
 	public async createOrder(memberId: string, input: OrderInput): Promise<Order> {
+	
 		if (!input.orderItems || input.orderItems.length === 0) {
 			throw new BadRequestException('At least one order item is required');
 		}
 
 		// Fetch authoritative prices from DB — ignore client-supplied itemPrice entirely
-		const productObjectIds = input.orderItems.map((item) => new Types.ObjectId(item.productId));
+		console.log('ORDER INPUT', JSON.stringify(input, null, 2));
+		// const productObjectIds = input.orderItems.map((item) => new Types.ObjectId(item.productId));
+		for (const item of input.orderItems) {
+     if (!Types.ObjectId.isValid(item.productId)) {
+    console.log('INVALID PRODUCT ID =>', item.productId);
+
+    throw new BadRequestException(
+      `Invalid productId: ${JSON.stringify(item.productId)}`
+    );
+  }
+}
+
+const productObjectIds = input.orderItems.map(
+  (item) => new Types.ObjectId(item.productId)
+);
 		const products = await this.productModel
 			.find({ _id: { $in: productObjectIds }, productStatus: ProductStatus.ACTIVE })
 			.exec();

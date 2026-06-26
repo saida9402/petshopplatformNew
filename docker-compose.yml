@@ -1,12 +1,11 @@
-version: "3.3"
 
 services:
   petoria-api:
     container_name: petoria-api
     restart: always
-    image: node:20.19.0
+    image: node:20.10.0
     ports:
-      - 3002:3002
+      - 4001:3007
     volumes:
       - ./:/usr/src/petoria
     working_dir: /usr/src/petoria
@@ -31,3 +30,8 @@ services:
 networks:
   monorepo-network:
     driver: bridge
+
+
+# petoria-next： localhost: 4000 <=> container: 3000
+# petoria-api:   localhost: 4001 <=> container: 3007
+# petoria-batch: localhost:4002 <=> container: 3008

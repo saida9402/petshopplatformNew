@@ -1,5 +1,5 @@
 import { Field, ID, InputType, Int } from '@nestjs/graphql';
-import { IsInt, IsNotEmpty, IsOptional, Length, Min } from 'class-validator';
+import { IsInt, IsMongoId, IsNotEmpty, IsOptional, Length, Min } from 'class-validator';
 import { OrderPaymentMethod } from '../../../libs/enums/order.enum';
 
 /* ─────────────────────────────────────────
@@ -7,6 +7,7 @@ import { OrderPaymentMethod } from '../../../libs/enums/order.enum';
 ───────────────────────────────────────── */
 @InputType()
 export class OrderItemInput {
+	@IsMongoId()
 	@IsNotEmpty()
 	@Field(() => ID)
 	productId: string;

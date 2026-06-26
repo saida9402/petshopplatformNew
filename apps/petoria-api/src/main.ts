@@ -4,6 +4,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { LoggingInterceptor } from './libs/interceptor/Logging.interceptor';
 import { graphqlUploadExpress } from 'graphql-upload';
 import * as express from 'express';
+
 import * as cookieParser from 'cookie-parser';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -65,6 +66,6 @@ async function bootstrap() {
 	app.use('/uploads', express.static(uploadsRoot));
 
 	app.useWebSocketAdapter(new WsAdapter(app));
-	await app.listen(process.env.PORT_API ?? 3000);
+	await app.listen(process.env.PORT_API ?? 3007);
 }
 bootstrap();
