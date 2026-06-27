@@ -4,6 +4,10 @@ services:
     container_name: petoria-api
     restart: always
     image: node:20.10.0
+
+    env_file:
+    - .env
+
     ports:
       - 4001:3007
     volumes:
@@ -17,6 +21,10 @@ services:
     container_name: petoria-batch
     restart: unless-stopped
     image: node:20.10.0
+    
+    env_file:
+      - .env
+
     ports:
       - 4002:3008
     volumes:
