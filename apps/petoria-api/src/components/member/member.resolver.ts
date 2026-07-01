@@ -1,10 +1,9 @@
-import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { MemberService } from './member.service';
 import { SellersInquiry, LoginInput, MemberInput, MembersInquiry } from '../../libs/dto/member/member.input';
 import { BadRequestException, InternalServerErrorException, Logger, UseGuards } from '@nestjs/common';
 import { Member, Members } from '../../libs/dto/member/member';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { Response } from 'express';
 
 import { ObjectId } from 'mongoose';
 import { AuthMember } from '../auth/decorators/authMember.decorator';
@@ -28,39 +27,18 @@ export class MemberResolver {
 
 	constructor(private readonly memberService: MemberService) {}
 
-	private setAuthCookie(res: Response, token: string): void {
-		res.cookie('accessToken', token, {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === 'production',
-			sameSite: 'strict',
-			maxAge: 7 * 24 * 60 * 60 * 1000,
-			path: '/',
-		});
-	}
-
 	@Throttle({ default: { limit: 5, ttl: 60000 } })
 	@Mutation(() => Member)
-	public async signup(@Args('input') input: MemberInput, @Context('res') res: Response): Promise<Member> {
+	public async signup(@Args('input') input: MemberInput): Promise<Member> {
 		this.logger.log('Mutation: signup');
-		const member = await this.memberService.signup(input);
-		if (member?.accessToken) this.setAuthCookie(res, member.accessToken);
-		return member;
+		return await this.memberService.signup(input);
 	}
 
 	@Throttle({ default: { limit: 5, ttl: 60000 } })
 	@Mutation(() => Member)
-	public async login(@Args('input') input: LoginInput, @Context('res') res: Response): Promise<Member | null> {
+	public async login(@Args('input') input: LoginInput): Promise<Member | null> {
 		this.logger.log('Mutation: login');
-		const member = await this.memberService.login(input);
-		if (member?.accessToken) this.setAuthCookie(res, member.accessToken);
-		return member;
-	}
-
-	@Mutation(() => Boolean)
-	public async logout(@Context('res') res: Response): Promise<boolean> {
-		this.logger.log('Mutation: logout');
-		res.clearCookie('accessToken', { path: '/' });
-		return true;
+		return await this.memberService.login(input);
 	}
 
 	@UseGuards(AuthGuard)
@@ -68,13 +46,10 @@ export class MemberResolver {
 	public async updateMember(
 		@Args('input') input: MemberUpdate,
 		@AuthMember('_id') memberId: ObjectId,
-		@Context('res') res: Response,
 	): Promise<Member> {
 		this.logger.log('Mutation: updateMember');
 		delete input._id;
-		const member = await this.memberService.updateMember(memberId, input);
-		if (member?.accessToken) this.setAuthCookie(res, member.accessToken);
-		return member;
+		return await this.memberService.updateMember(memberId, input);
 	}
 
 	@UseGuards(WithoutGuard)

@@ -32,13 +32,9 @@ export class RolesGuard implements CanActivate {
 		if (context.contextType === 'graphql') {
 			const request = context.getArgByIndex(2).req;
 
-			// Cookie first, then Authorization header (same order as AuthGuard)
-			let token: string | undefined = request.cookies?.accessToken;
-			if (!token) {
-				const bearerToken = request.headers.authorization;
-				if (bearerToken) token = bearerToken.split(' ')[1];
-			}
-			if (!token) throw new BadRequestException(Message.TOKEN_NOT_EXIST);
+			const bearerToken = request.headers.authorization;
+			if (!bearerToken) throw new BadRequestException(Message.TOKEN_NOT_EXIST);
+			const token = bearerToken.split(' ')[1];
 			let authMember: Member | null = null;
 			try {
 				authMember = await this.authService.verifyToken(token);
